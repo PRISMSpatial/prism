@@ -1,0 +1,48 @@
+{
+  "app": {
+    "name": "PRISM",
+    "tagline": "PRISM · Pathogen Reconnaissance & Intelligence for Spatial Multi-omics"
+  },
+  "nav": {
+    "compass": "C.O.M.P.A.S.S.",
+    "signals": "T.R.A.C.E.",
+    "phylogeny": "S.T.R.E.A.M.",
+    "molecule": "V.I.S.O.R.",
+    "forecast": "SEIR Forecast",
+    "sources": "V.I.R.S.I.F.T.",
+    "report": "Situation Report"
+  },
+  "status": {
+    "live": "live",
+    "fresh": "fresh",
+    "stale": "stale",
+    "error": "error"
+  },
+  "tier": {
+    "T3": "T3",
+    "T2": "T2",
+    "T1": "T1",
+    "T0": "T0"
+  },
+  "state": {
+    "GROWING": "GROWING",
+    "DECLINING": "DECLINING",
+    "UNCERTAIN": "UNCERTAIN"
+  },
+  "compass": {
+    "briefing": "Today's briefing",
+    "freshness": "Stream freshness",
+    "selection": "Selection",
+    "noSelection": "The planet at a glance. Nine regions under active surveillance."
+  },
+  "trace": {
+    "heatmap": "Anomaly heatmap",
+    "inbox": "Anomaly inbox",
+    "inspector": "Cell inspector"
+  },
+  "common": {
+    "search": "Search modules, regions, clades…",
+    "loading": "Loading…",
+    "noResults": "No results"
+  }
+}
