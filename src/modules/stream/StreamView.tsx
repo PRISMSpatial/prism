@@ -327,48 +327,44 @@ export default function StreamView() {
 
   return (
     <div className="stream-view">
-      <div className="stream-top">
-        <div className="panel" style={{ gridArea: 'tree' }}>
-          <div className="panel-head">
-            <span className="title"><b>TREETIME</b>  /  phylogenetic tree</span>
-            <span className="grow" />
-            <span className="mono mute" style={{ fontSize: 10 }}>n=944 · clock 3.4e−3</span>
-          </div>
-          <div className="panel-body flush" style={{ padding: 14 }}>
-            <PhyloTree selectedClade={selectedClade} setSelectedClade={handleClade} />
-          </div>
+      <div className="panel" style={{ gridArea: 'tree' }}>
+        <div className="panel-head">
+          <span className="title"><b>TREETIME</b>  /  phylogenetic tree</span>
+          <span className="grow" />
+          <span className="mono mute" style={{ fontSize: 10 }}>n=944 · clock 3.4e−3</span>
         </div>
-
-        <div className="panel" style={{ gridArea: 'sank' }}>
-          <div className="panel-head">
-            <span className="title"><b>STREAM</b>  /  clade flow · 2022 → 2026</span>
-            <span className="grow" />
-            <span className="mono mute" style={{ fontSize: 10 }}>brush tree to filter</span>
-          </div>
-          <div className="panel-body flush" style={{ padding: 14 }}>
-            <Sankey selectedClade={selectedClade} setSelectedClade={handleClade} />
-          </div>
+        <div className="panel-body flush" style={{ padding: 14 }}>
+          <PhyloTree selectedClade={selectedClade} setSelectedClade={handleClade} />
         </div>
       </div>
 
-      <div className="stream-bot">
-        <div className="panel" style={{ gridArea: 'rtt' }}>
-          <div className="panel-head">
-            <span className="title"><b>ROOT-TO-TIP</b>  /  molecular clock</span>
-            <span className="grow" />
-            <span className="mono mute" style={{ fontSize: 10 }}>n=47 · R²=0.64</span>
-          </div>
-          <div className="panel-body flush" style={{ padding: 14 }}>
-            <RootToTip selectedClade={selectedClade} />
-          </div>
+      <div className="panel" style={{ gridArea: 'sank' }}>
+        <div className="panel-head">
+          <span className="title"><b>STREAM</b>  /  clade flow · 2022 → 2026</span>
+          <span className="grow" />
+          <span className="mono mute" style={{ fontSize: 10 }}>brush tree to filter</span>
         </div>
+        <div className="panel-body flush" style={{ padding: 14 }}>
+          <Sankey selectedClade={selectedClade} setSelectedClade={handleClade} />
+        </div>
+      </div>
 
-        <div className="panel" style={{ gridArea: 'insp' }}>
-          <div className="panel-head">
-            <span className="title"><b>CLADE</b>  /  inspector</span>
-          </div>
-          <CladeInspector clade={selectedClade} />
+      <div className="panel" style={{ gridArea: 'rtt' }}>
+        <div className="panel-head">
+          <span className="title"><b>ROOT-TO-TIP</b>  /  molecular clock</span>
+          <span className="grow" />
+          <span className="mono mute" style={{ fontSize: 10 }}>n=47 · R²=0.64</span>
         </div>
+        <div className="panel-body flush" style={{ padding: 14 }}>
+          <RootToTip selectedClade={selectedClade} />
+        </div>
+      </div>
+
+      <div className="panel" style={{ gridArea: 'insp' }}>
+        <div className="panel-head">
+          <span className="title"><b>CLADE</b>  /  inspector</span>
+        </div>
+        <CladeInspector clade={selectedClade} />
       </div>
     </div>
   )
