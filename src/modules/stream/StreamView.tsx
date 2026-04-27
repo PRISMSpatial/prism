@@ -111,11 +111,15 @@ function Sankey({ selectedClade, setSelectedClade }: SankeyProps) {
     { x: 560, label: 'DESTINATION' },
   ]
 
-  const originNodes = [...new Set(PRISM_DATA.sankey.map(f => f.from))]
-  const destNodes   = [...new Set(PRISM_DATA.sankey.map(f => f.to))]
-  const midNodes    = [...new Set(
-    PRISM_DATA.sankey.filter(f => destNodes.includes(f.to)).map(f => f.to)
-  )].filter(n => PRISM_DATA.sankey.some(f => f.from === n))
+  // Classify nodes into strict 3-column layout:
+  // Origin = nodes that only appear as 'from' (never as 'to')
+  // Destination = nodes that only appear as 'to' (never as 'from')
+  // Intermediate = nodes that appear as both 'from' and 'to'
+  const allFrom = new Set(PRISM_DATA.sankey.map(f => f.from))
+  const allTo   = new Set(PRISM_DATA.sankey.map(f => f.to))
+  const originNodes = [...allFrom].filter(n => !allTo.has(n))
+  const destNodes   = [...allTo].filter(n => !allFrom.has(n))
+  const midNodes    = [...allFrom].filter(n => allTo.has(n))
 
   const nodeY = (nodes: string[]): Record<string, number> => {
     const gap = H / (nodes.length + 1)
@@ -125,6 +129,7 @@ function Sankey({ selectedClade, setSelectedClade }: SankeyProps) {
   const midY    = nodeY(midNodes)
   const destY   = nodeY(destNodes)
 
+  // Hop1: origin → intermediate, Hop2: intermediate → destination
   const hop1 = PRISM_DATA.sankey.filter(f => originNodes.includes(f.from) && midNodes.includes(f.to))
   const hop2 = PRISM_DATA.sankey.filter(f => midNodes.includes(f.from) && destNodes.includes(f.to))
 
@@ -200,9 +205,10 @@ function RootToTip({ selectedClade: _selectedClade }: RootToTipProps) {
   const tx = (t: number) => PAD + ((t - tMin) / (tMax - tMin)) * (W - PAD * 2)
   const dy = (d: number) => (H - PAD) - ((d - dMin) / (dMax - dMin)) * (H - PAD * 2)
 
-  const slope = 0.0028, intercept = -5.62
+  // Regression: divergence = slope * (t - 2022) + intercept
+  const slope = 0.0028, intercept = 0.0005
   const xs = [tMin, tMax]
-  const ys = xs.map(x => slope * x + intercept)
+  const ys = xs.map(x => slope * (x - 2022) + intercept)
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="rtt-svg">
@@ -265,6 +271,7 @@ interface CladeInspectorProps {
 }
 
 function CladeInspector({ clade }: CladeInspectorProps) {
+  const { setModule, setSelected } = useAppStore()
   const info = PRISM_DATA.clades.find(c => c.id === clade)
   if (!info) return (
     <div className="panel-body" style={{ color: 'var(--fg-mute)', fontSize: 12 }}>
@@ -299,8 +306,12 @@ function CladeInspector({ clade }: CladeInspectorProps) {
         <div>MUTATIONS    <b style={{ color: 'var(--fg)' }}>HA-226 · HA-193 · HA-158</b></div>
       </div>
       <div className="row" style={{ marginTop: 14, gap: 6 }}>
-        <button className="btn">Open in VISOR →</button>
-        <button className="btn">Jump to region →</button>
+        <button className="btn" onClick={() => setModule('molecule')}>Open in VISOR →</button>
+        <button className="btn" onClick={() => {
+          const region = PRISM_DATA.regions.find(r => r.clade === clade)
+          if (region) setSelected(region)
+          setModule('compass')
+        }}>Jump to region →</button>
       </div>
     </div>
   )

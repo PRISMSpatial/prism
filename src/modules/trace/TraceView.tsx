@@ -154,6 +154,7 @@ interface CellInspectorProps {
 }
 
 function CellInspector({ sel }: CellInspectorProps) {
+  const { setModule, setSelected } = useAppStore()
   if (!sel) return (
     <div className="panel-body" style={{ color: 'var(--fg-mute)', fontSize: 12 }}>
       Click a cell to drill into region × metric × time.
@@ -206,8 +207,8 @@ function CellInspector({ sel }: CellInspectorProps) {
           <text x={PAD + 4} y={PAD + 10} fill="#6f7e91" fontFamily="JetBrains Mono, monospace" fontSize="8">12W TRAJECTORY</text>
         </svg>
         <div className="row" style={{ marginTop: 10, gap: 6 }}>
-          <button className="btn">Open in COMPASS →</button>
-          <button className="btn">Join STREAM →</button>
+          <button className="btn" onClick={() => { setSelected(sel.region); setModule('compass') }}>Open in COMPASS →</button>
+          <button className="btn" onClick={() => { setSelected(sel.region); setModule('phylogeny') }}>Join STREAM →</button>
           <button className="btn ghost">Mark as expected</button>
         </div>
       </motion.div>
