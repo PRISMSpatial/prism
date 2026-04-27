@@ -1,6 +1,7 @@
 // DrugPanel — drug-design interface showing candidate compounds
 // Displays binding pocket summary and compound affinity/selectivity
 
+import { useState } from 'react'
 import { PRISM_DATA } from '../../data/mock'
 
 const STATUS_CHIP: Record<string, string> = {
@@ -12,6 +13,7 @@ const STATUS_CHIP: Record<string, string> = {
 
 export function DrugPanel() {
   const candidates = PRISM_DATA.drugCandidates
+  const [launched, setLaunched] = useState(false)
 
   return (
     <div className="drug-panel">
@@ -44,9 +46,18 @@ export function DrugPanel() {
         ))}
       </div>
 
-      <button className="btn" style={{ marginTop: 14, width: '100%' }}>
-        Launch rational design
+      <button
+        className="btn"
+        style={{ marginTop: 14, width: '100%' }}
+        onClick={() => setLaunched(true)}
+      >
+        {launched ? '✓ Design session active' : 'Launch rational design'}
       </button>
+      {launched && (
+        <div className="mono mute" style={{ fontSize: 9, marginTop: 6 }}>
+          Docking simulation queued · HA1 Sa/Sb pocket · {candidates.length} compounds
+        </div>
+      )}
     </div>
   )
 }

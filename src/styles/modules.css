@@ -272,6 +272,8 @@
 .nb-body pre { margin: 0; font-size: 12px; line-height: 1.6; color: var(--fg); overflow-x: auto; }
 .nb-md .nb-body { padding-top: 4px; }
 .nb-out .nb-body { background: var(--ink-0); padding: 6px 10px; border-left: 2px solid var(--signal-phos); }
+.nb-cell.running { border-left: 2px solid var(--signal-warm); }
+.nb-cell.running .nb-gutter { color: var(--signal-warm); }
 
 /* ======================= REPORT (paper) ======================= */
 .paper-root { max-width: 820px; margin: 0 auto; }

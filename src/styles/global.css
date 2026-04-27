@@ -177,6 +177,7 @@
 .btn.primary { background: var(--signal-phos); color: var(--ink-0); border-color: var(--signal-phos); font-weight: 500; }
 .btn.primary:hover { background: #bbff94; }
 .btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost.active { background: var(--ink-3); border-color: var(--line); color: var(--fg); }
 .btn .kbd { font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--fg-mute); border: 1px solid var(--line); border-radius: 2px; padding: 0 4px; }
 
 /* Command palette */

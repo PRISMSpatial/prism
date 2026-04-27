@@ -151,9 +151,10 @@ function Heatmap({ selectedCell, setSelectedCell, onOpenRegion }: HeatmapProps) 
 
 interface CellInspectorProps {
   sel: SelectedCell | null
+  onDismiss: (regionId: string) => void
 }
 
-function CellInspector({ sel }: CellInspectorProps) {
+function CellInspector({ sel, onDismiss }: CellInspectorProps) {
   const { setModule, setSelected } = useAppStore()
   if (!sel) return (
     <div className="panel-body" style={{ color: 'var(--fg-mute)', fontSize: 12 }}>
@@ -209,7 +210,7 @@ function CellInspector({ sel }: CellInspectorProps) {
         <div className="row" style={{ marginTop: 10, gap: 6 }}>
           <button className="btn" onClick={() => { setSelected(sel.region); setModule('compass') }}>Open in COMPASS →</button>
           <button className="btn" onClick={() => { setSelected(sel.region); setModule('phylogeny') }}>Join STREAM →</button>
-          <button className="btn ghost">Mark as expected</button>
+          <button className="btn ghost" onClick={() => onDismiss(sel.r)}>Mark as expected</button>
         </div>
       </motion.div>
     </AnimatePresence>
@@ -222,13 +223,23 @@ interface InboxProps {
   onOpenRegion: (region: Region) => void
   onSelect: (item: InboxItem) => void
   selectedId: string | undefined
+  filter: InboxFilter
+  dismissed: Set<string>
 }
 
-function Inbox({ onOpenRegion, onSelect, selectedId }: InboxProps) {
+function Inbox({ onOpenRegion, onSelect, selectedId, filter, dismissed }: InboxProps) {
   const statusColor = (s: string): string =>
-    ({ open: 'hot', investigating: 'warm', escalated: 'pink', dismissed: '' }[s] ?? '')
+    ({ new: 'hot', escalated: 'pink', monitoring: 'warm', dismissed: '' }[s] ?? '')
 
   const regById = Object.fromEntries(PRISM_DATA.regions.map(r => [r.id, r]))
+
+  const filtered = PRISM_DATA.inbox.filter(it => {
+    if (dismissed.has(it.id)) return false
+    if (filter === 'all') return true
+    if (filter === 'new') return it.status === 'new'
+    if (filter === 'escalated') return it.status === 'escalated'
+    return true
+  })
 
   return (
     <motion.div
@@ -237,7 +248,7 @@ function Inbox({ onOpenRegion, onSelect, selectedId }: InboxProps) {
       initial="initial"
       animate="animate"
     >
-      {PRISM_DATA.inbox.map(it => {
+      {filtered.map(it => {
         const reg = regById[it.region]
         const active = selectedId === it.id
         return (
@@ -274,10 +285,14 @@ function Inbox({ onOpenRegion, onSelect, selectedId }: InboxProps) {
 
 // ─── TraceView ───────────────────────────────────────────────────────────────
 
+type InboxFilter = 'all' | 'new' | 'escalated'
+
 export default function TraceView() {
   const setSelected = useAppStore(s => s.setSelected)
   const [sel, setSel] = useState<SelectedCell | null>(null)
   const [inboxSel, setInboxSel] = useState<InboxItem | null>(null)
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all')
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
 
   return (
     <div className="trace-view">
@@ -305,13 +320,26 @@ export default function TraceView() {
         <div className="panel-head">
           <span className="title"><b>INBOX</b>  /  7 anomalies</span>
           <span className="grow" />
-          <button className="btn ghost" style={{ fontSize: 10 }}>All · Open · Escalated</button>
+          <span className="row" style={{ gap: 4 }}>
+            {(['all', 'new', 'escalated'] as InboxFilter[]).map(f => (
+              <button
+                key={f}
+                className={`btn ghost${inboxFilter === f ? ' active' : ''}`}
+                style={{ fontSize: 10 }}
+                onClick={() => setInboxFilter(f)}
+              >
+                {f === 'all' ? 'All' : f === 'new' ? 'Open' : 'Escalated'}
+              </button>
+            ))}
+          </span>
         </div>
         <div className="panel-body flush">
           <Inbox
             onOpenRegion={r => setSelected(r)}
             onSelect={setInboxSel}
             selectedId={inboxSel?.id}
+            filter={inboxFilter}
+            dismissed={dismissed}
           />
         </div>
       </div>
@@ -320,7 +348,10 @@ export default function TraceView() {
         <div className="panel-head">
           <span className="title"><b>CELL</b>  /  inspector</span>
         </div>
-        <CellInspector sel={sel} />
+        <CellInspector sel={sel} onDismiss={(regionId) => {
+          const match = PRISM_DATA.inbox.find(it => it.region === regionId)
+          if (match) setDismissed(prev => new Set(prev).add(match.id))
+        }} />
         {sel && (
           <ConcordancePanel
             layers={sel.region.concordanceLayers}

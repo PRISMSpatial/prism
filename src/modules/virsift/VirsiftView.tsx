@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react'
 import { PRISM_DATA } from '../../data/mock'
 import type { DataSource, NotebookCell } from '../../types/domain'
 import { SOURCE_KIND_CHIP_CLASS, SOURCE_STATUS_CHIP_CLASS } from '../../types/domain'
@@ -48,12 +49,15 @@ function SourceCard({ s }: { s: DataSource }) {
   )
 }
 
-function Notebook() {
+function Notebook({ executedTo }: { executedTo: number }) {
   return (
     <div className="notebook">
       {PRISM_DATA.notebook.map((cell: NotebookCell) => {
+        const isExecuted = cell.n <= executedTo
+        const isRunning = cell.n === executedTo + 1
+        const style = { opacity: isExecuted ? 1 : 0.35, transition: 'opacity 0.3s' }
         if (cell.kind === 'md') return (
-          <div key={cell.n} className="nb-cell nb-md">
+          <div key={cell.n} className="nb-cell nb-md" style={style}>
             <div className="nb-gutter mono">{cell.n}</div>
             <div className="nb-body">
               <div className="serif" style={{ fontSize: 16, color: 'var(--fg)' }}>{cell.title}</div>
@@ -61,15 +65,15 @@ function Notebook() {
           </div>
         )
         if (cell.kind === 'code') return (
-          <div key={cell.n} className="nb-cell nb-code">
-            <div className="nb-gutter mono">In [{cell.n}]:</div>
+          <div key={cell.n} className={`nb-cell nb-code${isRunning ? ' running' : ''}`} style={style}>
+            <div className="nb-gutter mono">{isRunning ? 'In [*]:' : `In [${cell.n}]:`}</div>
             <div className="nb-body">
               <pre className="mono"><code>{colorCode(cell.src)}</code></pre>
             </div>
           </div>
         )
         return (
-          <div key={cell.n} className="nb-cell nb-out">
+          <div key={cell.n} className="nb-cell nb-out" style={style}>
             <div className="nb-gutter mono" style={{ color: 'var(--signal-phos)' }}>Out:</div>
             <div className="nb-body mono" style={{ color: 'var(--fg-dim)', fontSize: 11.5 }}>{cell.src}</div>
           </div>
@@ -86,6 +90,33 @@ function Notebook() {
 }
 
 export default function VirsiftView() {
+  const totalCells = PRISM_DATA.notebook.length
+  const [executedTo, setExecutedTo] = useState(totalCells) // start fully executed
+  const [running, setRunning] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+
+  const runAll = () => {
+    if (running) return
+    setExecutedTo(0)
+    setRunning(true)
+  }
+
+  useEffect(() => {
+    if (!running) return
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(() => {
+      setExecutedTo(prev => {
+        if (prev >= totalCells) {
+          setRunning(false)
+          if (timerRef.current) clearInterval(timerRef.current)
+          return totalCells
+        }
+        return prev + 1
+      })
+    }, 600)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [running, totalCells])
+
   return (
     <div className="virsift-view">
       <div className="panel" style={{ gridArea: 'src' }}>
@@ -106,11 +137,13 @@ export default function VirsiftView() {
           <span className="grow" />
           <span className="row" style={{ gap: 6 }}>
             <span className="chip phos"><i />kernel · py3.11</span>
-            <button className="btn ghost" style={{ fontSize: 10 }}>Run all</button>
+            <button className="btn ghost" style={{ fontSize: 10 }} onClick={runAll}>
+              {running ? '● Running…' : 'Run all'}
+            </button>
           </span>
         </div>
         <div className="panel-body">
-          <Notebook />
+          <Notebook executedTo={executedTo} />
         </div>
       </div>
     </div>
