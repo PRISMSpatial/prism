@@ -226,6 +226,8 @@ export const CLADE_COLORS: Record<string, string> = {
   '3C.2a1b.2a': 'var(--signal-phos)',
   '3C.2a1b.2a.2': 'var(--signal-cool)',
   '3C.2a1b.3a': 'var(--signal-warm)',
+  '3C.3a': 'var(--signal-cool)',
+  'B.1.7.2': 'var(--signal-pink)',
 }
 
 export const TIER_COLORS: Record<Tier, string> = {
