@@ -131,7 +131,7 @@ function GlobeHUD() {
       {/* System info top-right */}
       <div className="globe-hud tr" style={{ pointerEvents: 'none' }}>
         <div>RENDERER <b>WebGL · Three.js</b></div>
-        <div>EPISPLAT · CONF <b style={{ color: 'var(--signal-phos)' }}>0.82</b></div>
+        <div>EPISPLAT · CONF <b style={{ color: 'var(--signal-phos)' }}>{selected ? selected.concord.toFixed(2) : '—'}</b></div>
       </div>
     </>
   )

@@ -15,15 +15,16 @@ function weekLabel(w: number): string {
 
 export function TemporalScrubber() {
   const { currentWeek, setCurrentWeek, playing, setPlaying } = useAppStore()
-  const intervalRef = useRef<ReturnType<typeof setInterval>>()
+  const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
 
   // Auto-advance when playing
   useEffect(() => {
-    if (playing) {
-      intervalRef.current = setInterval(() => {
-        setCurrentWeek(useAppStore.getState().currentWeek >= WEEKS - 1 ? 0 : useAppStore.getState().currentWeek + 1)
-      }, PLAY_INTERVAL)
-    }
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    if (!playing) return
+    intervalRef.current = setInterval(() => {
+      const w = useAppStore.getState().currentWeek
+      setCurrentWeek(w >= WEEKS - 1 ? 0 : w + 1)
+    }, PLAY_INTERVAL)
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [playing, setCurrentWeek])
 

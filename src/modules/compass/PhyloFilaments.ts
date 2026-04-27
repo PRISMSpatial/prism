@@ -72,6 +72,11 @@ export class PhyloFilaments {
     return this.particles
   }
 
+  dispose() {
+    this.particles.geometry.dispose()
+    ;(this.particles.material as THREE.PointsMaterial).dispose()
+  }
+
   update(dt: number) {
     const posAttr = this.particles.geometry.getAttribute('position') as THREE.BufferAttribute
     const positions = posAttr.array as Float32Array
@@ -91,10 +96,11 @@ export class PhyloFilaments {
 
         for (let t = 0; t < TRAIL_LENGTH; t++) {
           const trailT = (baseT - t * 0.025 + 1.0) % 1.0 // trail follows behind
-          const arcIdx = Math.floor(trailT * arcLen)
-          const arcFrac = trailT * arcLen - arcIdx
-          const idx0 = Math.min(arcIdx, arcLen)
-          const idx1 = Math.min(arcIdx + 1, arcLen)
+          const rawIdx = trailT * arcLen
+          const arcIdx = Math.floor(rawIdx)
+          const arcFrac = rawIdx - arcIdx
+          const idx0 = Math.max(0, Math.min(arcIdx, arcLen - 1))
+          const idx1 = Math.min(idx0 + 1, arcLen)
 
           const pt = new THREE.Vector3().lerpVectors(
             config.arcPoints[idx0],

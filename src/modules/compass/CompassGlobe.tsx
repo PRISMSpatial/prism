@@ -321,10 +321,12 @@ export function CompassGlobe() {
   const lastClickTime    = useRef(0)
   const pointerRef       = useRef({ down: false, startX: 0, startY: 0, lastX: 0, lastY: 0, moved: false, velX: 0, velY: 0 })
 
-  const { selected, setSelected, tweaks } = useAppStore()
+  const { selected, setSelected, tweaks, currentWeek } = useAppStore()
   const autoRotateRef = useRef(tweaks.rotation === 'auto')
+  const currentWeekRef = useRef(currentWeek)
   useEffect(() => { autoRotateRef.current = tweaks.rotation === 'auto' }, [tweaks.rotation])
   useEffect(() => { selectedRef.current = selected }, [selected])
+  useEffect(() => { currentWeekRef.current = currentWeek }, [currentWeek])
 
   // ── Zoom helpers ────────────────────────────────────────────────────────────
   const zoomTo = useCallback((z: number, duration = 0.55) => {
@@ -577,6 +579,28 @@ export function CompassGlobe() {
       // Advance EpiSplat time uniform for pulse/shimmer/jitter animation
       const dt = refs.clock.getDelta()
       refs.splatMaterial.uniforms.uTime.value = refs.clock.elapsedTime
+
+      // Update EpiSplat attributes from splatTimeline based on currentWeek
+      const w = currentWeekRef.current
+      const a = refs.splatAttribs
+      PRISM_DATA.regions.forEach((r, i) => {
+        const s = r.splatTimeline[w] ?? r.splat
+        a.radius.array[i]     = s.ps
+        a.brightness.array[i] = s.rt
+        a.pulseRate.array[i]  = s.hNorm
+        a.jitter.array[i]     = s.tcc
+        a.bloom.array[i]      = s.eti
+        a.shimmer.array[i]    = s.rd
+        a.glow.array[i]       = s.asMut
+      })
+      a.radius.needsUpdate     = true
+      a.brightness.needsUpdate = true
+      a.pulseRate.needsUpdate  = true
+      a.jitter.needsUpdate     = true
+      a.bloom.needsUpdate      = true
+      a.shimmer.needsUpdate    = true
+      a.glow.needsUpdate       = true
+
       // Advance phylo-filament particles along flyway arcs
       refs.filaments.update(dt)
       renderer.render(scene, camera)
@@ -608,6 +632,14 @@ export function CompassGlobe() {
       el.removeEventListener('pointerup',     onPointerUp    as EventListener)
       el.removeEventListener('pointercancel', onPointerUp    as EventListener)
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      // Dispose all scene geometries and materials to prevent memory leaks
+      scene.traverse((obj) => {
+        if (obj instanceof THREE.Mesh || obj instanceof THREE.LineSegments || obj instanceof THREE.Points) {
+          obj.geometry?.dispose()
+          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose())
+          else obj.material?.dispose()
+        }
+      })
       renderer.dispose()
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement)
       sceneRef.current = null

@@ -112,6 +112,10 @@ function buildTrimer(scene: THREE.Scene): {
 export function MoleculeViewer({ selectedSite, onSelectSite }: MoleculeViewerProps) {
   const mountRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number>()
+  const selectedSiteRef = useRef(selectedSite)
+  const onSelectSiteRef = useRef(onSelectSite)
+  selectedSiteRef.current = selectedSite
+  onSelectSiteRef.current = onSelectSite
 
   useEffect(() => {
     const el = mountRef.current
@@ -158,7 +162,7 @@ export function MoleculeViewer({ selectedSite, onSelectSite }: MoleculeViewerPro
       raycaster.setFromCamera(mouse, camera)
       const hits = raycaster.intersectObjects([...siteSpheres.values()])
       if (hits.length > 0) {
-        onSelectSite(hits[0].object.userData.site)
+        onSelectSiteRef.current(hits[0].object.userData.site)
       }
     }
     el.addEventListener('pointerdown', onPointerDown)
@@ -179,7 +183,7 @@ export function MoleculeViewer({ selectedSite, onSelectSite }: MoleculeViewerPro
 
       // Highlight selected site
       siteSpheres.forEach((mesh, site) => {
-        const target = site === selectedSite ? 1.8 : 1.0
+        const target = site === selectedSiteRef.current ? 1.8 : 1.0
         mesh.scale.lerp(new THREE.Vector3(target, target, target), 0.1)
       })
 
@@ -207,7 +211,8 @@ export function MoleculeViewer({ selectedSite, onSelectSite }: MoleculeViewerPro
       renderer.dispose()
       if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement)
     }
-  }, [selectedSite, onSelectSite])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div
