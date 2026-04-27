@@ -1,5 +1,5 @@
 // PRISM — mock dataset: Novosibirsk H3N2 canonical backtest + current surveillance
-import type { PrismData, HeatRow, RootToTipPoint, AlignmentChar } from '../types/domain'
+import type { PrismData, HeatRow, RootToTipPoint, AlignmentChar, EpiSplatSignals } from '../types/domain'
 
 const regionWeights: Record<string, number> = {
   NSK: 0.95, CSP: 0.75, VNM: 0.65, MEX: 0.25,
@@ -80,6 +80,43 @@ function buildAlignment(): AlignmentChar[] {
   } as AlignmentChar))
 }
 
+// Deterministic per-region EpiSplat signal derivation
+const subtypeMap: Record<string, string> = {
+  NSK: 'H3N2', CSP: 'H5N1', VNM: 'H7N9', MEX: 'H1N1',
+  GBR: 'H3N2', USA: 'H3N2', JPN: 'H3N2', ZAF: 'H3N2', AUS: 'H3N2',
+}
+
+function buildSplat(id: string, seeding: number, rt: number, concord: number): EpiSplatSignals {
+  const w = regionWeights[id]
+  return {
+    ps: Math.min(1, seeding * 1.05),
+    rt,
+    subtype: subtypeMap[id] ?? 'H3N2',
+    hNorm: Math.min(1, w * 0.85 + 0.1),
+    tcc: Math.min(1, concord * 0.95),
+    eti: Math.min(1, seeding * 0.9 + 0.05),
+    rd: Math.min(1, (1 - concord) * 0.8 + w * 0.2),
+    asMut: id === 'NSK' ? 0.82 : id === 'CSP' ? 0.64 : id === 'VNM' ? 0.48 : Math.max(0.05, w * 0.4),
+  }
+}
+
+function buildSplatTimeline(base: EpiSplatSignals): EpiSplatSignals[] {
+  return Array.from({ length: 12 }, (_, w) => {
+    const t = w / 11
+    const drift = 0.15 * Math.sin(t * Math.PI * 1.4)
+    return {
+      ps: Math.max(0.05, Math.min(1, base.ps * (0.6 + 0.4 * t) + drift * 0.3)),
+      rt: Math.max(0.3, base.rt * (0.8 + 0.2 * t) + drift * 0.15),
+      subtype: base.subtype,
+      hNorm: Math.max(0.05, Math.min(1, base.hNorm * (0.7 + 0.3 * t))),
+      tcc: Math.max(0.05, Math.min(1, base.tcc * (0.5 + 0.5 * t) + drift * 0.1)),
+      eti: Math.max(0.05, Math.min(1, base.eti * (0.6 + 0.4 * t))),
+      rd: Math.max(0.05, Math.min(1, base.rd + drift * 0.2)),
+      asMut: Math.max(0.05, Math.min(1, base.asMut * (0.7 + 0.3 * t))),
+    }
+  })
+}
+
 export const PRISM_DATA: PrismData = {
   now: '2026-04-21T09:14:07Z',
   pathogen: { name: 'H3N2 · A/Novosibirsk/0047/2026', clade: '3C.2a1b.2a.B.1.7.2' },
@@ -92,17 +129,32 @@ export const PRISM_DATA: PrismData = {
     { id: 'biobot',  name: 'Biobot',      kind: 'wastewater', latency: '11h 42m', status: 'fresh',  color: 'hot',    last: '21:32 UTC prev' },
   ],
 
-  regions: [
-    { id: 'NSK', name: 'Novosibirsk oblast', country: 'Russian Federation', iso: 'RUS', lat: 55.03,  lon:  82.92, tier: 'T3', phen: 'Endemic Persistence', rt: 1.24, rtLo: 1.09, rtHi: 1.41, seeding: 0.946, state: 'GROWING',   concord: 0.82, clade: 'B.1.7.2' },
-    { id: 'CSP', name: 'Caspian basin',      country: 'Kazakhstan',         iso: 'KAZ', lat: 42.85,  lon:  50.40, tier: 'T2', phen: 'Import-Dominated',    rt: 1.08, rtLo: 0.96, rtHi: 1.22, seeding: 0.781, state: 'UNCERTAIN', concord: 0.64, clade: 'H5N1' },
-    { id: 'VNM', name: 'Red River delta',   country: 'Viet Nam',           iso: 'VNM', lat: 21.03,  lon: 105.85, tier: 'T2', phen: 'Transitional',        rt: 1.14, rtLo: 1.01, rtHi: 1.28, seeding: 0.614, state: 'GROWING',   concord: 0.71, clade: 'H7N9' },
-    { id: 'MEX', name: 'Valley of México',  country: 'Mexico',             iso: 'MEX', lat: 19.43,  lon: -99.13, tier: 'T1', phen: 'Import-Dominated',    rt: 0.82, rtLo: 0.72, rtHi: 0.94, seeding: 0.228, state: 'DECLINING', concord: 0.78, clade: 'H1N1' },
-    { id: 'GBR', name: 'Greater London',    country: 'United Kingdom',     iso: 'GBR', lat: 51.51,  lon:  -0.13, tier: 'T0', phen: 'Endemic Persistence', rt: 0.88, rtLo: 0.78, rtHi: 0.98, seeding: 0.041, state: 'DECLINING', concord: 0.91, clade: '3C.2a1b' },
-    { id: 'USA', name: 'Northeast corridor',country: 'United States',      iso: 'USA', lat: 40.71,  lon: -74.01, tier: 'T1', phen: 'Import-Dominated',    rt: 0.95, rtLo: 0.84, rtHi: 1.08, seeding: 0.192, state: 'UNCERTAIN', concord: 0.73, clade: '3C.3a' },
-    { id: 'JPN', name: 'Kantō',             country: 'Japan',              iso: 'JPN', lat: 35.68,  lon: 139.69, tier: 'T1', phen: 'Import-Dominated',    rt: 1.02, rtLo: 0.91, rtHi: 1.15, seeding: 0.311, state: 'UNCERTAIN', concord: 0.80, clade: '3C.2a1b' },
-    { id: 'ZAF', name: 'Gauteng',           country: 'South Africa',       iso: 'ZAF', lat: -26.20, lon:  28.04, tier: 'T0', phen: 'Endemic Persistence', rt: 0.74, rtLo: 0.62, rtHi: 0.87, seeding: 0.028, state: 'DECLINING', concord: 0.86, clade: 'B.1.7.2' },
-    { id: 'AUS', name: 'New South Wales',   country: 'Australia',          iso: 'AUS', lat: -33.87, lon: 151.21, tier: 'T1', phen: 'Import-Dominated',    rt: 0.91, rtLo: 0.80, rtHi: 1.05, seeding: 0.147, state: 'UNCERTAIN', concord: 0.76, clade: '3C.2a1b' },
-  ],
+  regions: (() => {
+    const raw = [
+      { id: 'NSK', name: 'Novosibirsk oblast', country: 'Russian Federation', iso: 'RUS', lat: 55.03,  lon:  82.92, tier: 'T3' as const, phen: 'Endemic Persistence' as const, rt: 1.24, rtLo: 1.09, rtHi: 1.41, seeding: 0.946, state: 'GROWING'   as const, concord: 0.82, clade: 'B.1.7.2' },
+      { id: 'CSP', name: 'Caspian basin',      country: 'Kazakhstan',         iso: 'KAZ', lat: 42.85,  lon:  50.40, tier: 'T2' as const, phen: 'Import-Dominated' as const,    rt: 1.08, rtLo: 0.96, rtHi: 1.22, seeding: 0.781, state: 'UNCERTAIN' as const, concord: 0.64, clade: 'H5N1' },
+      { id: 'VNM', name: 'Red River delta',   country: 'Viet Nam',           iso: 'VNM', lat: 21.03,  lon: 105.85, tier: 'T2' as const, phen: 'Transitional' as const,        rt: 1.14, rtLo: 1.01, rtHi: 1.28, seeding: 0.614, state: 'GROWING'   as const, concord: 0.71, clade: 'H7N9' },
+      { id: 'MEX', name: 'Valley of México',  country: 'Mexico',             iso: 'MEX', lat: 19.43,  lon: -99.13, tier: 'T1' as const, phen: 'Import-Dominated' as const,    rt: 0.82, rtLo: 0.72, rtHi: 0.94, seeding: 0.228, state: 'DECLINING' as const, concord: 0.78, clade: 'H1N1' },
+      { id: 'GBR', name: 'Greater London',    country: 'United Kingdom',     iso: 'GBR', lat: 51.51,  lon:  -0.13, tier: 'T0' as const, phen: 'Endemic Persistence' as const, rt: 0.88, rtLo: 0.78, rtHi: 0.98, seeding: 0.041, state: 'DECLINING' as const, concord: 0.91, clade: '3C.2a1b' },
+      { id: 'USA', name: 'Northeast corridor',country: 'United States',      iso: 'USA', lat: 40.71,  lon: -74.01, tier: 'T1' as const, phen: 'Import-Dominated' as const,    rt: 0.95, rtLo: 0.84, rtHi: 1.08, seeding: 0.192, state: 'UNCERTAIN' as const, concord: 0.73, clade: '3C.3a' },
+      { id: 'JPN', name: 'Kantō',             country: 'Japan',              iso: 'JPN', lat: 35.68,  lon: 139.69, tier: 'T1' as const, phen: 'Import-Dominated' as const,    rt: 1.02, rtLo: 0.91, rtHi: 1.15, seeding: 0.311, state: 'UNCERTAIN' as const, concord: 0.80, clade: '3C.2a1b' },
+      { id: 'ZAF', name: 'Gauteng',           country: 'South Africa',       iso: 'ZAF', lat: -26.20, lon:  28.04, tier: 'T0' as const, phen: 'Endemic Persistence' as const, rt: 0.74, rtLo: 0.62, rtHi: 0.87, seeding: 0.028, state: 'DECLINING' as const, concord: 0.86, clade: 'B.1.7.2' },
+      { id: 'AUS', name: 'New South Wales',   country: 'Australia',          iso: 'AUS', lat: -33.87, lon: 151.21, tier: 'T1' as const, phen: 'Import-Dominated' as const,    rt: 0.91, rtLo: 0.80, rtHi: 1.05, seeding: 0.147, state: 'UNCERTAIN' as const, concord: 0.76, clade: '3C.2a1b' },
+    ]
+    return raw.map(r => {
+      const splat = buildSplat(r.id, r.seeding, r.rt, r.concord)
+      return {
+        ...r,
+        splat,
+        splatTimeline: buildSplatTimeline(splat),
+        concordanceLayers: {
+          clinical: Math.min(1, r.concord * 0.95 + 0.04),
+          genomic: Math.min(1, r.concord * 0.88 + 0.08),
+          wastewater: Math.min(1, r.concord * 0.72 + 0.15),
+        },
+      }
+    })
+  })(),
 
   clades: [
     { id: '3C.2a1b',    origin: 'CHN',       n: 412, fitness:  0.04 },
@@ -136,17 +188,21 @@ export const PRISM_DATA: PrismData = {
       { id: '3C.3a-y',      x: 240, y: 150, parent: '3C.3a',   clade: '3C.3a',      leaf: true, highlight: false },
       { id: 'B.1.7.2',      x: 240, y: 210, parent: '3C.3a',   clade: 'B.1.7.2',    leaf: true, highlight: true },
     ],
+    reassortmentBridges: [
+      { from: '3C.2a1b.2a', to: 'B.1.7.2', segment: 'NA (N2)' },
+      { from: '3C.2a1b-x',  to: '3C.3a-y', segment: 'PB2' },
+    ],
   },
 
   sankey: [
-    { clade: '3C.2a1b',    from: 'CHN',     to: 'SE ASIA',       value: 160, color: 'violet' },
-    { clade: '3C.2a1b',    from: 'SE ASIA', to: 'EU · RUS · US', value: 110, color: 'violet' },
-    { clade: '3C.2a1b.2a', from: 'CHN',     to: 'SE ASIA',       value: 130, color: 'phos'   },
-    { clade: '3C.2a1b.2a', from: 'SE ASIA', to: 'EU · RUS · US', value: 180, color: 'phos'   },
-    { clade: '3C.3a',      from: 'CHN',     to: 'SE ASIA',       value:  90, color: 'cool'   },
-    { clade: '3C.3a',      from: 'SE ASIA', to: 'EU · RUS · US', value:  60, color: 'cool'   },
-    { clade: 'B.1.7.2',    from: 'CHN',     to: 'SE ASIA',       value:  20, color: 'pink'   },
-    { clade: 'B.1.7.2',    from: 'SE ASIA', to: 'EU · RUS · US', value:  70, color: 'pink'   },
+    { clade: '3C.2a1b',    from: 'CHN',     to: 'SE ASIA',       value: 160, color: 'violet', ps: 0.62 },
+    { clade: '3C.2a1b',    from: 'SE ASIA', to: 'EU · RUS · US', value: 110, color: 'violet', ps: 0.62 },
+    { clade: '3C.2a1b.2a', from: 'CHN',     to: 'SE ASIA',       value: 130, color: 'phos',   ps: 0.48 },
+    { clade: '3C.2a1b.2a', from: 'SE ASIA', to: 'EU · RUS · US', value: 180, color: 'phos',   ps: 0.48 },
+    { clade: '3C.3a',      from: 'CHN',     to: 'SE ASIA',       value:  90, color: 'cool',   ps: 0.31 },
+    { clade: '3C.3a',      from: 'SE ASIA', to: 'EU · RUS · US', value:  60, color: 'cool',   ps: 0.31 },
+    { clade: 'B.1.7.2',    from: 'CHN',     to: 'SE ASIA',       value:  20, color: 'pink',   ps: 0.74 },
+    { clade: 'B.1.7.2',    from: 'SE ASIA', to: 'EU · RUS · US', value:  70, color: 'pink',   ps: 0.74 },
   ],
 
   rootToTip: buildRootToTip(),
@@ -180,5 +236,12 @@ export const PRISM_DATA: PrismData = {
     { n: 6, kind: 'out',  src: "4,128 sequences · metrics.shape = (4128, 7)" },
     { n: 7, kind: 'md',   title: 'EpiSplat export for COMPASS', src: '' },
     { n: 8, kind: 'code', lang: 'py', src: "vs.to_episplat(metrics, out='episplat/h3n2_2026w16.json', compress=True)" },
+  ],
+
+  drugCandidates: [
+    { name: 'Oseltamivir',    affinity: 0.92, selectivity: 0.78, status: 'lead' },
+    { name: 'Baloxavir',      affinity: 0.87, selectivity: 0.84, status: 'lead' },
+    { name: 'PRX-4182',       affinity: 0.71, selectivity: 0.91, status: 'candidate' },
+    { name: 'CC-42344',       affinity: 0.64, selectivity: 0.68, status: 'preclinical' },
   ],
 }

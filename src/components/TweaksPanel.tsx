@@ -27,6 +27,18 @@ const TWEAK_DEFS: { key: TweakKey; label: string; options: TweakOption[] }[] = [
     key: 'copy', label: 'Copy tone',
     options: [{ value: 'clinical', label: 'Clinical' }, { value: 'technical', label: 'Technical' }, { value: 'brief', label: 'Brief' }],
   },
+  {
+    key: 'episplat', label: 'EpiSplat signals',
+    options: [{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }],
+  },
+  {
+    key: 'filaments', label: 'Phylo-filaments',
+    options: [{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }],
+  },
+  {
+    key: 'graticule', label: 'Globe graticule',
+    options: [{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }],
+  },
 ]
 
 export function TweaksPanel() {

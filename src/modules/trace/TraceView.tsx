@@ -6,6 +6,7 @@ import { useAppStore } from '../../store'
 import { PRISM_DATA } from '../../data/mock'
 import type { Region, Metric, InboxItem } from '../../types/domain'
 import { TIER_CHIP_CLASS } from '../../types/domain'
+import { ConcordancePanel } from './ConcordancePanel'
 
 // ─── types ──────────────────────────────────────────────────────────────────
 
@@ -242,7 +243,7 @@ function Inbox({ onOpenRegion, onSelect, selectedId }: InboxProps) {
           <motion.div key={it.id} variants={staggerItem}>
             <motion.button
               whileHover={{ x: 2 }}
-              className={'inbox-item ' + (active ? 'active' : '') + (it.status === 'dismissed' ? ' dismissed' : '')}
+              className={'inbox-item' + (active ? ' active' : '') + (it.status === 'dismissed' ? ' dismissed' : '') + (it.score > 0.7 ? ' critical' : '')}
               onClick={() => { onSelect(it); onOpenRegion(reg) }}
             >
               <div className="inbox-score">
@@ -319,6 +320,12 @@ export default function TraceView() {
           <span className="title"><b>CELL</b>  /  inspector</span>
         </div>
         <CellInspector sel={sel} />
+        {sel && (
+          <ConcordancePanel
+            layers={sel.region.concordanceLayers}
+            regionId={sel.r}
+          />
+        )}
       </div>
     </div>
   )

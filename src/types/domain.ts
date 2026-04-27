@@ -17,6 +17,23 @@ export type SourceStatus = 'live' | 'fresh' | 'stale' | 'error'
 export type ImpactLevel = 'high' | 'mid' | 'low'
 export type AnomalyStatus = 'new' | 'escalated' | 'monitoring' | 'dismissed'
 
+export interface EpiSplatSignals {
+  ps: number       // Persistence Score → radius (0-1)
+  rt: number       // R(t) → brightness (0-2+)
+  subtype: string  // HA/NA identity → color hue
+  hNorm: number    // Normalized entropy → pulse rate (0-1)
+  tcc: number      // Temporal cluster coefficient → jitter (0-1)
+  eti: number      // Epidemic threshold index → bloom intensity (0-1)
+  rd: number       // Relative diversity → shimmer (0-1)
+  asMut: number    // Antigenic site mutations → hotspot glow (0-1)
+}
+
+export interface ConcordanceLayers {
+  clinical: number
+  genomic: number
+  wastewater: number
+}
+
 export interface Region {
   id: string
   name: string
@@ -33,6 +50,9 @@ export interface Region {
   state: TransmissionState
   concord: number
   clade: string
+  splat: EpiSplatSignals
+  splatTimeline: EpiSplatSignals[]  // 12 weeks for temporal scrubber
+  concordanceLayers: ConcordanceLayers
 }
 
 export interface Clade {
@@ -94,6 +114,7 @@ export interface SankeyFlow {
   to: string
   value: number
   color: string
+  ps: number  // Persistence Score → drives pipe width
 }
 
 export interface RootToTipPoint {
@@ -144,6 +165,19 @@ export interface Pathogen {
   clade: string
 }
 
+export interface ReassortmentBridge {
+  from: string
+  to: string
+  segment: string
+}
+
+export interface DrugCandidate {
+  name: string
+  affinity: number
+  selectivity: number
+  status: 'lead' | 'candidate' | 'preclinical' | 'screening'
+}
+
 export interface PrismData {
   now: string
   pathogen: Pathogen
@@ -154,13 +188,14 @@ export interface PrismData {
   heat: HeatRow[]
   forecast: ForecastData
   incidence: IncidenceData
-  tree: { nodes: TreeNode[] }
+  tree: { nodes: TreeNode[]; reassortmentBridges: ReassortmentBridge[] }
   sankey: SankeyFlow[]
   rootToTip: RootToTipPoint[]
   mutations: Mutation[]
   alignment: AlignmentChar[]
   inbox: InboxItem[]
   notebook: NotebookCell[]
+  drugCandidates: DrugCandidate[]
 }
 
 export interface Tweaks {
@@ -169,6 +204,9 @@ export interface Tweaks {
   heatScale: 'linear' | 'sqrt' | 'log'
   rotation: 'auto' | 'manual'
   copy: 'clinical' | 'technical' | 'brief'
+  episplat: 'on' | 'off'
+  filaments: 'on' | 'off'
+  graticule: 'on' | 'off'
 }
 
 export const DEFAULT_TWEAKS: Tweaks = {
@@ -177,6 +215,9 @@ export const DEFAULT_TWEAKS: Tweaks = {
   heatScale: 'sqrt',
   rotation: 'auto',
   copy: 'clinical',
+  episplat: 'on',
+  filaments: 'on',
+  graticule: 'on',
 }
 
 // Color mappings

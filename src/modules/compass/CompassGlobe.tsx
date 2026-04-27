@@ -4,6 +4,8 @@ import gsap from 'gsap'
 import { useAppStore } from '../../store'
 import { PRISM_DATA } from '../../data/mock'
 import type { Region } from '../../types/domain'
+import { EPISPLAT_VERT, EPISPLAT_FRAG } from './shaders'
+import { PhyloFilaments } from './PhyloFilaments'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -22,6 +24,14 @@ const DBLCLICK_MS    = 280     // max ms between clicks to register as double-cl
 const TIER_HEX: Record<string, number> = {
   T3: 0xff6b4a, T2: 0xf0b429, T1: 0x4cc9f0, T0: 0x9ef277,
 }
+// Subtype → RGB for EpiSplat color channel
+const SUBTYPE_RGB: Record<string, [number, number, number]> = {
+  H3N2: [0.30, 0.55, 1.00],  // cool blue
+  H5N1: [1.00, 0.42, 0.29],  // hot red-orange
+  H7N9: [0.94, 0.70, 0.16],  // warm amber
+  H1N1: [0.62, 0.95, 0.47],  // phos green
+}
+
 const FLYWAYS: [string, string][] = [
   ['CSP', 'NSK'], ['VNM', 'CSP'], ['USA', 'GBR'], ['JPN', 'USA'], ['AUS', 'ZAF'],
 ]
@@ -79,13 +89,30 @@ const ATMO_FRAG = /* glsl */`
 
 // ─── Scene ────────────────────────────────────────────────────────────────────
 
+interface SplatAttribs {
+  worldPos:   THREE.InstancedBufferAttribute
+  radius:     THREE.InstancedBufferAttribute
+  brightness: THREE.InstancedBufferAttribute
+  color:      THREE.InstancedBufferAttribute
+  pulseRate:  THREE.InstancedBufferAttribute
+  jitter:     THREE.InstancedBufferAttribute
+  bloom:      THREE.InstancedBufferAttribute
+  shimmer:    THREE.InstancedBufferAttribute
+  glow:       THREE.InstancedBufferAttribute
+}
+
 interface SceneRefs {
   renderer:  THREE.WebGLRenderer
   scene:     THREE.Scene
   camera:    THREE.PerspectiveCamera
   earth:     THREE.Group
-  earthMesh: THREE.Mesh         // main sphere, used for surface raycasting
-  pinMeshes: Map<string, THREE.Mesh>
+  earthMesh: THREE.Mesh
+  splatMesh: THREE.Mesh
+  splatAttribs: SplatAttribs
+  splatMaterial: THREE.ShaderMaterial
+  splatWorldPositions: THREE.Vector3[]  // for raycasting
+  filaments: PhyloFilaments
+  clock:     THREE.Clock
   raycaster: THREE.Raycaster
   rotY: number
   rotX: number
@@ -152,44 +179,130 @@ function buildScene(canvas: HTMLDivElement, w: number, h: number): SceneRefs {
     }),
   ))
 
-  // Region pins
-  const pinMeshes = new Map<string, THREE.Mesh>()
+  // EpiSplat instanced billboard quads
   const regionById = Object.fromEntries(PRISM_DATA.regions.map(r => [r.id, r]))
+  const N = PRISM_DATA.regions.length
 
-  PRISM_DATA.regions.forEach(r => {
-    const surfacePos = ll2xyz(r.lat, r.lon, R)
-    const normal = surfacePos.clone().normalize()
-    const col = TIER_HEX[r.tier] ?? 0xffffff
+  // Base quad geometry: 2 triangles forming a [-1,1] square
+  const baseGeo = new THREE.InstancedBufferGeometry()
+  const quadVerts = new Float32Array([ -1,-1,0,  1,-1,0,  1,1,0,  -1,-1,0,  1,1,0,  -1,1,0 ])
+  baseGeo.setAttribute('position', new THREE.BufferAttribute(quadVerts, 3))
+  baseGeo.instanceCount = N
 
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.015, 0.028, 24),
-      new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide, transparent: true, opacity: 0.25, depthWrite: false }),
-    )
-    ring.position.copy(surfacePos.clone().add(normal.clone().multiplyScalar(0.001)))
-    ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal)
-    earth.add(ring)
+  // Per-instance attributes
+  const aWorldPos   = new Float32Array(N * 3)
+  const aRadius     = new Float32Array(N)
+  const aBrightness = new Float32Array(N)
+  const aColor      = new Float32Array(N * 3)
+  const aPulseRate  = new Float32Array(N)
+  const aJitter     = new Float32Array(N)
+  const aBloom      = new Float32Array(N)
+  const aShimmer    = new Float32Array(N)
+  const aGlow       = new Float32Array(N)
 
-    const pin = new THREE.Mesh(
-      new THREE.ConeGeometry(0.009, 0.05, 8),
-      new THREE.MeshPhongMaterial({ color: col, emissive: new THREE.Color(col), emissiveIntensity: 0.55, shininess: 60 }),
-    )
-    pin.userData.regionId = r.id
-    pin.position.copy(surfacePos.clone().add(normal.clone().multiplyScalar(0.028)))
-    pin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal)
-    earth.add(pin)
-    pinMeshes.set(r.id, pin)
+  const splatWorldPositions: THREE.Vector3[] = []
+
+  PRISM_DATA.regions.forEach((r, i) => {
+    const pos = ll2xyz(r.lat, r.lon, R + 0.015) // slightly above surface
+    splatWorldPositions.push(pos)
+    aWorldPos[i*3]   = pos.x
+    aWorldPos[i*3+1] = pos.y
+    aWorldPos[i*3+2] = pos.z
+
+    const s = r.splat
+    aRadius[i]     = s.ps
+    aBrightness[i] = s.rt
+    const rgb = SUBTYPE_RGB[s.subtype] ?? [0.6, 0.6, 0.6]
+    aColor[i*3]   = rgb[0]
+    aColor[i*3+1] = rgb[1]
+    aColor[i*3+2] = rgb[2]
+    aPulseRate[i]  = s.hNorm
+    aJitter[i]     = s.tcc
+    aBloom[i]      = s.eti
+    aShimmer[i]    = s.rd
+    aGlow[i]       = s.asMut
   })
 
-  // Flyway arcs
+  const splatAttribs: SplatAttribs = {
+    worldPos:   new THREE.InstancedBufferAttribute(aWorldPos, 3),
+    radius:     new THREE.InstancedBufferAttribute(aRadius, 1),
+    brightness: new THREE.InstancedBufferAttribute(aBrightness, 1),
+    color:      new THREE.InstancedBufferAttribute(aColor, 3),
+    pulseRate:  new THREE.InstancedBufferAttribute(aPulseRate, 1),
+    jitter:     new THREE.InstancedBufferAttribute(aJitter, 1),
+    bloom:      new THREE.InstancedBufferAttribute(aBloom, 1),
+    shimmer:    new THREE.InstancedBufferAttribute(aShimmer, 1),
+    glow:       new THREE.InstancedBufferAttribute(aGlow, 1),
+  }
+
+  baseGeo.setAttribute('aWorldPos',   splatAttribs.worldPos)
+  baseGeo.setAttribute('aRadius',     splatAttribs.radius)
+  baseGeo.setAttribute('aBrightness', splatAttribs.brightness)
+  baseGeo.setAttribute('aColor',      splatAttribs.color)
+  baseGeo.setAttribute('aPulseRate',  splatAttribs.pulseRate)
+  baseGeo.setAttribute('aJitter',     splatAttribs.jitter)
+  baseGeo.setAttribute('aBloom',      splatAttribs.bloom)
+  baseGeo.setAttribute('aShimmer',    splatAttribs.shimmer)
+  baseGeo.setAttribute('aGlow',       splatAttribs.glow)
+
+  const splatMaterial = new THREE.ShaderMaterial({
+    vertexShader: EPISPLAT_VERT,
+    fragmentShader: EPISPLAT_FRAG,
+    uniforms: { uTime: { value: 0 } },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+
+  const splatMesh = new THREE.Mesh(baseGeo, splatMaterial)
+  earth.add(splatMesh)
+
+  const clock = new THREE.Clock()
+
+  // Flyway arcs + phylo-filament particles
+  const filamentConfigs: { arcPoints: THREE.Vector3[]; particleCount: number; speed: number; color: THREE.Color }[] = []
   FLYWAYS.forEach(([aid, bid]) => {
     const ra = regionById[aid], rb = regionById[bid]
     if (!ra || !rb) return
     const pts = arcPoints(ra.lat, ra.lon, rb.lat, rb.lon)
     const tubeGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 80, 0.0028, 5, false)
-    earth.add(new THREE.Mesh(tubeGeo, new THREE.MeshBasicMaterial({ color: 0xf0b429, transparent: true, opacity: 0.55 })))
+    earth.add(new THREE.Mesh(tubeGeo, new THREE.MeshBasicMaterial({ color: 0xf0b429, transparent: true, opacity: 0.35 })))
+    filamentConfigs.push({ arcPoints: pts, particleCount: 4, speed: 0.15, color: new THREE.Color(0x9ef277) })
   })
 
-  return { renderer, scene, camera, earth, earthMesh, pinMeshes, raycaster: new THREE.Raycaster(), rotY: 0, rotX: 0 }
+  const filaments = new PhyloFilaments(filamentConfigs)
+  earth.add(filaments.object)
+
+  // Graticule — lat/lon grid lines at 30° intervals
+  const gratGeo = new THREE.BufferGeometry()
+  const gratVerts: number[] = []
+  const GRAT_SEGS = 90
+  // Latitude lines
+  for (let lat = -60; lat <= 60; lat += 30) {
+    for (let i = 0; i < GRAT_SEGS; i++) {
+      const lon0 = (i / GRAT_SEGS) * 360 - 180
+      const lon1 = ((i + 1) / GRAT_SEGS) * 360 - 180
+      const p0 = ll2xyz(lat, lon0, R + 0.002)
+      const p1 = ll2xyz(lat, lon1, R + 0.002)
+      gratVerts.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z)
+    }
+  }
+  // Longitude lines
+  for (let lon = -180; lon < 180; lon += 30) {
+    for (let i = 0; i < GRAT_SEGS; i++) {
+      const lat0 = (i / GRAT_SEGS) * 180 - 90
+      const lat1 = ((i + 1) / GRAT_SEGS) * 180 - 90
+      const p0 = ll2xyz(lat0, lon, R + 0.002)
+      const p1 = ll2xyz(lat1, lon, R + 0.002)
+      gratVerts.push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z)
+    }
+  }
+  gratGeo.setAttribute('position', new THREE.Float32BufferAttribute(gratVerts, 3))
+  earth.add(new THREE.LineSegments(gratGeo, new THREE.LineBasicMaterial({
+    color: 0x4cc9f0, transparent: true, opacity: 0.06, depthWrite: false,
+  })))
+
+  return { renderer, scene, camera, earth, earthMesh, splatMesh, splatAttribs, splatMaterial, splatWorldPositions, filaments, clock, raycaster: new THREE.Raycaster(), rotY: 0, rotX: 0 }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -233,13 +346,24 @@ export function CompassGlobe() {
       ((clientX - rect.left) / rect.width) * 2 - 1,
       -((clientY - rect.top) / rect.height) * 2 + 1,
     )
-    s.raycaster.setFromCamera(mouse, s.camera)
-    const hits = s.raycaster.intersectObjects([...s.pinMeshes.values()])
-    if (hits.length > 0) {
-      const id = hits[0].object.userData.regionId as string
-      const region = PRISM_DATA.regions.find(r => r.id === id)
-      if (region) setSelected(region)
-    }
+
+    // Project each splat world position to screen, find nearest to click
+    let bestDist = 30 // max pixel distance to register a hit
+    let bestRegion: Region | null = null
+    s.splatWorldPositions.forEach((wp, i) => {
+      const worldPos = wp.clone().applyMatrix4(s.earth.matrixWorld)
+      const screen = worldPos.project(s.camera)
+      const sx = (screen.x * 0.5 + 0.5) * rect.width
+      const sy = (-screen.y * 0.5 + 0.5) * rect.height
+      const dx = clientX - rect.left - sx
+      const dy = clientY - rect.top - sy
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < bestDist) {
+        bestDist = dist
+        bestRegion = PRISM_DATA.regions[i]
+      }
+    })
+    if (bestRegion) setSelected(bestRegion)
   }, [setSelected])
 
   // ── Region pan + GSAP ───────────────────────────────────────────────────────
@@ -290,12 +414,21 @@ export function CompassGlobe() {
     )
     s.raycaster.setFromCamera(mouse, s.camera)
 
-    // Pin hit → select + zoom in
-    const pinHits = s.raycaster.intersectObjects([...s.pinMeshes.values()])
-    if (pinHits.length > 0) {
-      const id = pinHits[0].object.userData.regionId as string
-      const region = PRISM_DATA.regions.find(r => r.id === id)
-      if (region) setSelected(region)
+    // Splat hit → select + zoom in (screen-space proximity check)
+    let bestDist = 40
+    let bestRegion: Region | null = null
+    s.splatWorldPositions.forEach((wp, i) => {
+      const worldPos = wp.clone().applyMatrix4(s.earth.matrixWorld)
+      const screen = worldPos.project(s.camera)
+      const sx = (screen.x * 0.5 + 0.5) * rect.width
+      const sy = (-screen.y * 0.5 + 0.5) * rect.height
+      const dx = clientX - rect.left - sx
+      const dy = clientY - rect.top - sy
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < bestDist) { bestDist = dist; bestRegion = PRISM_DATA.regions[i] }
+    })
+    if (bestRegion) {
+      setSelected(bestRegion)
       zoomTo(1.65)
       return
     }
@@ -441,11 +574,11 @@ export function CompassGlobe() {
         const clouds = earth.children.find(c => c.userData.isClouds)
         if (clouds) clouds.rotation.y = refs.rotY * 0.08
       }
-      const sel = selectedRef.current
-      refs.pinMeshes.forEach((pin, id) => {
-        const target = sel?.id === id ? 2.0 : 1.0
-        pin.scale.lerp(new THREE.Vector3(target, target, target), 0.12)
-      })
+      // Advance EpiSplat time uniform for pulse/shimmer/jitter animation
+      const dt = refs.clock.getDelta()
+      refs.splatMaterial.uniforms.uTime.value = refs.clock.elapsedTime
+      // Advance phylo-filament particles along flyway arcs
+      refs.filaments.update(dt)
       renderer.render(scene, camera)
     }
     animate()

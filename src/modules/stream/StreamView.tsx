@@ -29,6 +29,38 @@ function PhyloTree({ selectedClade, setSelectedClade }: PhyloTreeProps) {
           <line x1={e.a.x} y1={e.b.y} x2={e.b.x} y2={e.b.y} stroke="#22303f" strokeWidth="1" />
         </g>
       ))}
+
+      {/* Reassortment bridges — dashed curves for segment swap events */}
+      {PRISM_DATA.tree.reassortmentBridges.map((br, i) => {
+        const nFrom = byId[br.from]
+        const nTo = byId[br.to]
+        if (!nFrom || !nTo) return null
+        const mx = (nFrom.x + nTo.x) / 2 + 30
+        const my = (nFrom.y + nTo.y) / 2
+        return (
+          <g key={'rb' + i}>
+            <path
+              d={`M ${nFrom.x} ${nFrom.y} Q ${mx} ${my} ${nTo.x} ${nTo.y}`}
+              fill="none"
+              stroke="var(--signal-pink)"
+              strokeWidth="1.2"
+              strokeDasharray="4 3"
+              opacity="0.65"
+            />
+            <text
+              x={mx - 4}
+              y={my - 6}
+              fill="var(--signal-pink)"
+              fontFamily="JetBrains Mono, monospace"
+              fontSize="7"
+              opacity="0.8"
+            >
+              {br.segment}
+            </text>
+          </g>
+        )
+      })}
+
       {nodes.filter(n => n.leaf).map(n => {
         const active = selectedClade === n.clade
         return (
@@ -96,7 +128,8 @@ function Sankey({ selectedClade, setSelectedClade }: SankeyProps) {
   const hop1 = PRISM_DATA.sankey.filter(f => originNodes.includes(f.from) && midNodes.includes(f.to))
   const hop2 = PRISM_DATA.sankey.filter(f => midNodes.includes(f.from) && destNodes.includes(f.to))
 
-  const scale = (v: number) => v / 5
+  // PS-driven width: higher persistence score = thicker flow bands
+  const scale = (v: number, ps: number = 0.5) => (v / 5) * (0.6 + ps * 0.8)
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="sankey-svg">
@@ -132,7 +165,7 @@ function Sankey({ selectedClade, setSelectedClade }: SankeyProps) {
         const x2 = isHop1 ? cols[1].x - 2 : cols[2].x - 2
         const y1 = isHop1 ? originY[f.from] : midY[f.from]
         const y2 = isHop1 ? midY[f.to]      : destY[f.to]
-        const t  = scale(f.value)
+        const t  = scale(f.value, f.ps)
         const cx1 = x1 + (x2 - x1) * 0.45
         const cx2 = x1 + (x2 - x1) * 0.55
         const active = selectedClade === f.clade

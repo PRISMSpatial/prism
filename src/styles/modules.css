@@ -36,9 +36,66 @@
 .globe-hud b { color: var(--fg); font-weight: 500; }
 .globe-hud.tl { top: 80px; left: 24px; }
 .globe-hud.tr { top: 80px; right: 24px; text-align: right; }
-.globe-hud.bl { bottom: 20px; left: 24px; display: flex; gap: 12px; }
-.globe-hud.bl i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-.globe-hud.br { bottom: 20px; right: 24px; }
+.globe-hud.bl { bottom: 56px; left: 24px; display: flex; gap: 8px; flex-wrap: wrap; max-width: 280px; }
+.globe-hud.bl.episplat-legend { flex-direction: column; gap: 2px; font-size: 9.5px; }
+.globe-hud.bl i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.globe-hud.br { bottom: 56px; right: 24px; }
+
+/* Scanline overlay for tactical GEOINT aesthetic */
+.compass-canvas::after {
+  content: '';
+  position: absolute; inset: 0;
+  pointer-events: none; z-index: 5;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(158, 242, 119, 0.015) 2px,
+    rgba(158, 242, 119, 0.015) 4px
+  );
+}
+
+/* Temporal scrubber */
+.temporal-scrubber {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 10;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(7, 9, 12, 0.85);
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+  padding: 6px 12px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--fg-mute);
+}
+.scrubber-btn {
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 2px; font-size: 10px;
+  color: var(--fg-dim);
+}
+.scrubber-btn:hover { background: var(--ink-3); color: var(--fg); }
+.scrubber-btn.play { color: var(--signal-phos); }
+.scrubber-track { position: relative; width: 160px; height: 20px; display: flex; align-items: center; }
+.scrubber-range {
+  width: 100%; height: 3px;
+  -webkit-appearance: none; appearance: none;
+  background: var(--line-soft); border-radius: 2px; outline: none;
+}
+.scrubber-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--signal-phos); cursor: pointer;
+}
+.scrubber-ticks {
+  position: absolute; top: 14px; left: 0; right: 0;
+  display: flex; justify-content: space-between;
+}
+.scrubber-tick {
+  width: 2px; height: 4px; background: var(--line-soft); border-radius: 1px;
+}
+.scrubber-tick.active { background: var(--signal-phos); height: 6px; }
+.scrubber-label { color: var(--signal-phos); white-space: nowrap; }
 
 .brief-rail {
   border-left: 1px solid var(--line-soft);
@@ -110,6 +167,13 @@
 .inbox-item:hover { background: var(--ink-2); }
 .inbox-item.active { background: var(--ink-2); border-left: 2px solid var(--signal-phos); padding-left: 12px; }
 .inbox-item.dismissed { opacity: .4; }
+.inbox-item.critical {
+  animation: phosphor-bloom 1.6s ease-in-out infinite;
+}
+@keyframes phosphor-bloom {
+  0%, 100% { box-shadow: 0 0 4px rgba(158, 242, 119, 0.15), inset 0 0 2px rgba(158, 242, 119, 0.05); }
+  50% { box-shadow: 0 0 12px rgba(158, 242, 119, 0.35), inset 0 0 6px rgba(158, 242, 119, 0.1); }
+}
 .inbox-score { text-align: center; min-width: 40px; }
 .inbox-body { flex: 1; min-width: 0; }
 .inbox-title { font-size: 12.5px; color: var(--fg); margin-top: 3px; line-height: 1.3; }
@@ -117,8 +181,8 @@
 /* ======================= VISOR ======================= */
 .visor-view {
   display: grid;
-  grid-template-areas: "mol align" "mol muts";
-  grid-template-columns: 1fr 1.1fr;
+  grid-template-areas: "mol align drug" "mol muts drug";
+  grid-template-columns: 1.1fr 1fr 260px;
   grid-template-rows: 1fr 1fr;
   gap: 10px;
   padding: 10px;
@@ -126,6 +190,14 @@
   min-height: 0;
 }
 .molecule-svg { width: 100%; max-width: 440px; height: auto; }
+.drug-panel { padding: 0; }
+.drug-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 2px;
+  border: 1px solid var(--line-soft);
+  background: var(--ink-1);
+}
+.drug-row:hover { background: var(--ink-2); }
 .align-ribbon { display: flex; flex-direction: column; gap: 8px; }
 .align-row { width: 100%; height: auto; max-height: 50px; }
 .align-legend { display: flex; gap: 14px; margin-top: 8px; font-size: 10.5px; }

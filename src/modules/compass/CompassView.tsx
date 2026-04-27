@@ -4,6 +4,7 @@ import { useAppStore } from '../../store'
 import { PRISM_DATA } from '../../data/mock'
 import { TIER_CHIP_CLASS } from '../../types/domain'
 import { CompassGlobe } from './CompassGlobe'
+import { TemporalScrubber } from './TemporalScrubber'
 
 // ─── Briefing rail (unchanged) ────────────────────────────────────────────────
 
@@ -106,12 +107,17 @@ function GlobeHUD() {
         </div>
       </div>
 
-      {/* Tier legend bottom-left */}
-      <div className="globe-hud bl" style={{ pointerEvents: 'none' }}>
-        <span><i style={{ background: 'var(--signal-hot)' }} /> T3 GROWING</span>
-        <span><i style={{ background: 'var(--signal-warm)' }} /> T2 UNCERTAIN</span>
-        <span><i style={{ background: 'var(--signal-cool)' }} /> T1 DECLINING</span>
-        <span><i style={{ background: 'var(--signal-phos)' }} /> T0 CONTAINED</span>
+      {/* EpiSplat signal legend bottom-left */}
+      <div className="globe-hud bl episplat-legend" style={{ pointerEvents: 'none' }}>
+        <div className="caps mute" style={{ marginBottom: 4, fontSize: 9 }}>EPISPLAT ENCODING</div>
+        <span><i style={{ background: 'var(--signal-hot)' }} /> RADIUS · PS</span>
+        <span><i style={{ background: 'var(--signal-warm)' }} /> BRIGHT · R(t)</span>
+        <span><i style={{ background: 'var(--signal-cool)' }} /> COLOR · Subtype</span>
+        <span><i style={{ background: 'var(--signal-phos)' }} /> PULSE · H<sub>norm</sub></span>
+        <span><i style={{ background: 'var(--signal-violet)' }} /> JITTER · TCC</span>
+        <span><i style={{ background: 'var(--signal-pink)' }} /> BLOOM · ETI</span>
+        <span><i style={{ background: '#a6b2c2' }} /> SHIMMER · RD</span>
+        <span><i style={{ background: '#ff7a3d' }} /> GLOW · Antigenic</span>
       </div>
 
       {/* Coords top-left */}
@@ -137,10 +143,9 @@ export default function CompassView() {
   return (
     <div className="compass-view">
       <div className="compass-canvas">
-        {/* Three.js renders into this absolute container */}
         <CompassGlobe />
-        {/* HUD overlays sit on top */}
         <GlobeHUD />
+        <TemporalScrubber />
       </div>
       <BriefingRail />
     </div>

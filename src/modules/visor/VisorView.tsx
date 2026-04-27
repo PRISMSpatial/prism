@@ -1,6 +1,8 @@
-/* VISOR — molecular structure + alignment ribbon + mutation table */
+/* VISOR — molecular structure + alignment ribbon + mutation table + drug design */
 import { useState } from 'react'
 import { PRISM_DATA } from '../../data/mock'
+import { MoleculeViewer } from './MoleculeViewer'
+import { DrugPanel } from './DrugPanel'
 
 // ─── Molecule ────────────────────────────────────────────────────────────────
 
@@ -244,12 +246,21 @@ export default function VisorView() {
     <div className="visor-view">
       <div className="panel" style={{ gridArea: 'mol' }}>
         <div className="panel-head">
-          <span className="title"><b>VISOR</b>  /  HA trimer · ESM-2 homolog</span>
+          <span className="title"><b>VISOR</b>  /  HA trimer · WebGL · ESM-2 homolog</span>
           <span className="grow" />
           <span className="mono mute" style={{ fontSize: 10 }}>confidence · pLDDT 82.1</span>
         </div>
-        <div className="panel-body flush" style={{ display: 'grid', placeItems: 'center' }}>
-          <Molecule selectedSite={site} setSelectedSite={setSite} />
+        <div className="panel-body flush" style={{ minHeight: 320, position: 'relative' }}>
+          <MoleculeViewer selectedSite={site} onSelectSite={(s) => setSite(s === site ? null : s)} />
+        </div>
+      </div>
+
+      <div className="panel" style={{ gridArea: 'drug' }}>
+        <div className="panel-head">
+          <span className="title"><b>DESIGN</b>  /  rational intervention</span>
+        </div>
+        <div className="panel-body">
+          <DrugPanel />
         </div>
       </div>
 
