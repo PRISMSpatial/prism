@@ -2,7 +2,8 @@
 from fastapi import APIRouter
 from app.storage.store import store
 from app.models.domain import (
-    Region, DataSource, HeatRow, ForecastData, InboxItem, DrugCandidate,
+    Region, DataSource, HeatRow, ForecastData, IncidenceData, InboxItem,
+    DrugCandidate, Metric, NotebookCell, Pathogen,
     PhylogenyResponse, MoleculeResponse,
 )
 
@@ -50,6 +51,28 @@ async def get_molecule():
         mutations=store.mutations,
         alignment=store.alignment,
     ).model_dump(by_alias=True)
+
+
+@router.get("/pathogen")
+async def get_pathogen():
+    return store.pathogen
+
+
+@router.get("/metrics", response_model=list[Metric])
+async def get_metrics():
+    return store.metrics
+
+
+@router.get("/incidence", response_model=IncidenceData)
+async def get_incidence():
+    if store.incidence:
+        return store.incidence
+    return IncidenceData(obs=[], fit=[])
+
+
+@router.get("/notebook", response_model=list[NotebookCell])
+async def get_notebook():
+    return store.notebook
 
 
 @router.get("/inbox", response_model=list[InboxItem])

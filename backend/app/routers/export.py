@@ -27,13 +27,21 @@ async def export_csv():
 @router.get("/export/json")
 async def export_json():
     data = {
+        "pathogen": store.pathogen.model_dump() if store.pathogen else None,
         "regions": [r.model_dump() for r in store.regions],
         "sources": [s.model_dump() for s in store.sources],
         "clades": [c.model_dump() for c in store.clades],
+        "metrics": [m.model_dump() for m in getattr(store, 'metrics', [])],
         "heat": [h.model_dump() for h in store.heat],
         "forecast": {k: v.model_dump() for k, v in store.forecast.items()},
+        "incidence": store.incidence.model_dump() if store.incidence else None,
+        "tree": store.tree.model_dump(by_alias=True) if store.tree else None,
+        "sankey": [s.model_dump(by_alias=True) for s in store.sankey],
+        "rootToTip": [p.model_dump() for p in store.root_to_tip],
         "mutations": [m.model_dump() for m in store.mutations],
+        "alignment": [a.model_dump() for a in store.alignment],
         "inbox": [i.model_dump() for i in store.inbox],
+        "notebook": [n.model_dump() for n in store.notebook],
         "drugCandidates": [d.model_dump() for d in store.drug_candidates],
     }
     content = json.dumps(data, indent=2)

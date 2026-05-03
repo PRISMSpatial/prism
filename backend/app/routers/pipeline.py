@@ -2,7 +2,7 @@
 import uuid
 import asyncio
 from datetime import datetime, timezone
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.storage.store import store
 from app.models.domain import PipelineStatus
 
@@ -52,6 +52,5 @@ async def get_pipeline_status():
 async def get_pipeline_run(run_id: str):
     run = store.pipeline_runs.get(run_id)
     if not run:
-        from fastapi import HTTPException
         raise HTTPException(404, "Pipeline run not found")
     return run

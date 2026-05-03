@@ -103,10 +103,7 @@ export function usePipelineStatus(runId: string | null) {
       return res.data as { run_id: string; status: string; current_stage: string | null; progress: number }
     },
     enabled: !!runId,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status
-      return status === 'running' || status === 'pending' ? 1000 : false
-    },
+    refetchInterval: 1000,
   })
 }
 
