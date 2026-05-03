@@ -1,4 +1,5 @@
 import { PRISM_DATA } from '../../data/mock'
+import { downloadExport } from '../../api/queries'
 
 // Minimal inline FanChart for the report (uses the forecast data)
 function ReportFanChart() {
@@ -174,6 +175,12 @@ export default function ReportView() {
         <div>PRISM · EpiSplat v3.1 · confidence {nsk.concord.toFixed(2)}</div>
         <div>Prepared by <b>j.ortega</b> · countersigned by <b>m.tanaka</b></div>
         <div>PAGE 1 · OF 4</div>
+      </div>
+
+      <div className="row" style={{ marginTop: 20, gap: 8, justifyContent: 'center' }}>
+        <button className="btn" onClick={() => downloadExport('report')}>Export PDF</button>
+        <button className="btn ghost" onClick={() => downloadExport('csv')}>Export CSV</button>
+        <button className="btn ghost" onClick={() => downloadExport('json')}>Export JSON</button>
       </div>
     </div>
   )

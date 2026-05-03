@@ -242,12 +242,41 @@
 /* ======================= VIRSIFT ======================= */
 .virsift-view {
   display: grid;
-  grid-template-areas: "src nb";
-  grid-template-columns: 1fr 1.2fr;
+  grid-template-areas: "upload src" "nb nb";
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: auto 1fr;
   gap: 10px;
   padding: 10px;
   height: 100%;
   min-height: 0;
+}
+
+/* Upload dropzone */
+.upload-dropzone {
+  border: 2px dashed var(--line-soft);
+  border-radius: 4px;
+  padding: 24px 16px;
+  text-align: center;
+  transition: border-color var(--motion-fast), background var(--motion-fast);
+}
+.upload-dropzone.drag-over {
+  border-color: var(--signal-phos);
+  background: rgba(158, 242, 119, 0.05);
+}
+.upload-dropzone:hover { border-color: var(--line); }
+
+/* Pipeline progress bar */
+.pipeline-bar {
+  height: 4px;
+  background: var(--ink-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pipeline-fill {
+  height: 100%;
+  background: var(--signal-phos);
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 .src-grid {
   display: grid;

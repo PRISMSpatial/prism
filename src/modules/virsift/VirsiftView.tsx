@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { PRISM_DATA } from '../../data/mock'
+import { useUpload, usePipelineRun, usePipelineStatus } from '../../api/queries'
 import type { DataSource, NotebookCell } from '../../types/domain'
 import { SOURCE_KIND_CHIP_CLASS, SOURCE_STATUS_CHIP_CLASS } from '../../types/domain'
 
@@ -89,6 +90,88 @@ function Notebook({ executedTo }: { executedTo: number }) {
   )
 }
 
+function UploadPanel() {
+  const upload = useUpload()
+  const pipelineRun = usePipelineRun()
+  const [runId, setRunId] = useState<string | null>(null)
+  const pipelineStatus = usePipelineStatus(runId)
+  const [dragOver, setDragOver] = useState(false)
+
+  const handleFile = useCallback(async (file: File) => {
+    const result = await upload.mutateAsync(file)
+    const run = await pipelineRun.mutateAsync(result.upload_id)
+    setRunId(run.run_id)
+  }, [upload, pipelineRun])
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }, [handleFile])
+
+  const onFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+  }, [handleFile])
+
+  const status = pipelineStatus.data
+  const progress = status?.progress ?? 0
+
+  return (
+    <div className="panel" style={{ gridArea: 'upload' }}>
+      <div className="panel-head">
+        <span className="title"><b>UPLOAD</b>  /  FASTA ingestion</span>
+      </div>
+      <div className="panel-body">
+        <div
+          className={`upload-dropzone${dragOver ? ' drag-over' : ''}`}
+          onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+        >
+          {upload.isPending ? (
+            <div className="mono" style={{ color: 'var(--signal-warm)' }}>Uploading...</div>
+          ) : (
+            <>
+              <div className="mono" style={{ fontSize: 12, color: 'var(--fg-dim)', marginBottom: 6 }}>
+                Drop FASTA file here
+              </div>
+              <div className="mono mute" style={{ fontSize: 10, marginBottom: 10 }}>
+                .fa · .fasta · .fa.gz
+              </div>
+              <label className="btn ghost" style={{ cursor: 'pointer' }}>
+                Browse
+                <input type="file" accept=".fa,.fasta,.fa.gz,.fasta.gz" onChange={onFileInput} hidden />
+              </label>
+            </>
+          )}
+        </div>
+
+        {upload.data && (
+          <div className="mono" style={{ fontSize: 10, color: 'var(--fg-dim)', marginTop: 10 }}>
+            Uploaded: <b style={{ color: 'var(--fg)' }}>{upload.data.filename}</b> · {upload.data.seq_count} sequences
+          </div>
+        )}
+
+        {status && (
+          <div style={{ marginTop: 12 }}>
+            <div className="mono" style={{ fontSize: 10, color: 'var(--fg-dim)', marginBottom: 4 }}>
+              Pipeline: <b style={{ color: status.status === 'completed' ? 'var(--signal-phos)' : status.status === 'running' ? 'var(--signal-warm)' : 'var(--fg)' }}>
+                {status.status}
+              </b>
+              {status.current_stage && <span className="mute"> · {status.current_stage}</span>}
+            </div>
+            <div className="pipeline-bar">
+              <div className="pipeline-fill" style={{ width: `${progress * 100}%` }} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function VirsiftView() {
   const totalCells = PRISM_DATA.notebook.length
   const [executedTo, setExecutedTo] = useState(totalCells) // start fully executed
@@ -119,6 +202,7 @@ export default function VirsiftView() {
 
   return (
     <div className="virsift-view">
+      <UploadPanel />
       <div className="panel" style={{ gridArea: 'src' }}>
         <div className="panel-head">
           <span className="title"><b>VIRSIFT</b>  /  ingestion streams · 5 active</span>
