@@ -2,6 +2,7 @@
 
 export const EPISPLAT_VERT = /* glsl */ `
 uniform float uTime;
+uniform float uIntroReveal;
 
 attribute vec3 aWorldPos;
 attribute float aRadius;
@@ -12,6 +13,7 @@ attribute float aJitter;
 attribute float aBloom;
 attribute float aShimmer;
 attribute float aGlow;
+attribute float aHoverScale;
 
 varying vec2 vUv;
 varying float vBrightness;
@@ -21,6 +23,7 @@ varying float vBloom;
 varying float vShimmer;
 varying float vGlow;
 varying float vRadius;
+varying float vIntro;
 
 float hash(float n) {
   return fract(sin(n) * 43758.5453123);
@@ -36,6 +39,11 @@ void main() {
   vGlow = aGlow;
   vRadius = aRadius;
 
+  // Staggered intro reveal: each splat pops in based on its world position hash
+  float introHash = hash(aWorldPos.x * 37.1 + aWorldPos.z * 53.7);
+  float introT = smoothstep(introHash * 0.6, introHash * 0.6 + 0.4, uIntroReveal);
+  vIntro = introT;
+
   vec3 camRight = vec3(modelViewMatrix[0][0], modelViewMatrix[1][0], modelViewMatrix[2][0]);
   vec3 camUp    = vec3(modelViewMatrix[0][1], modelViewMatrix[1][1], modelViewMatrix[2][1]);
 
@@ -44,6 +52,9 @@ void main() {
   vec3 jitterOffset = (camRight * jx + camUp * jy) * aJitter * 0.012;
 
   float scale = mix(0.025, 0.09, aRadius) * (1.0 + aBloom * 0.5);
+  // Apply hover proximity scaling and intro pop
+  scale *= aHoverScale * introT;
+
   vec3 vertexPos = aWorldPos + jitterOffset
     + camRight * position.x * scale
     + camUp * position.y * scale;
@@ -63,6 +74,7 @@ varying float vBloom;
 varying float vShimmer;
 varying float vGlow;
 varying float vRadius;
+varying float vIntro;
 
 float hash2(vec2 p) {
   return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
@@ -80,6 +92,8 @@ float noise2(vec2 p) {
 }
 
 void main() {
+  if (vIntro < 0.01) discard;
+
   vec2 center = vUv - 0.5;
   float dist = length(center) * 2.0;
 
@@ -105,7 +119,7 @@ void main() {
   float hotspotAlpha = vGlow * glowRing * 0.7 * (0.8 + 0.2 * sin(uTime * 1.8));
 
   vec3 finalColor = coreColor * alpha + bloomColor * bloomAlpha + hotspotColor * hotspotAlpha;
-  float finalAlpha = max(max(alpha, bloomAlpha), hotspotAlpha);
+  float finalAlpha = max(max(alpha, bloomAlpha), hotspotAlpha) * vIntro;
 
   if (finalAlpha < 0.01) discard;
 
