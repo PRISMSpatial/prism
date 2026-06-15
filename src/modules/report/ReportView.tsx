@@ -1,8 +1,9 @@
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 import { downloadExport } from '../../api/queries'
 
 // Minimal inline FanChart for the report (uses the forecast data)
 function ReportFanChart() {
+  const PRISM_DATA = usePrismData()
   const fc = PRISM_DATA.forecast
   const W = 560
   const H = 120
@@ -44,6 +45,7 @@ function ReportFanChart() {
 }
 
 export default function ReportView() {
+  const PRISM_DATA = usePrismData()
   const nsk = PRISM_DATA.regions.find(r => r.id === 'NSK')!
 
   return (

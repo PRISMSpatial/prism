@@ -2,7 +2,7 @@
 // Displays binding pocket summary and compound affinity/selectivity
 
 import { useState } from 'react'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 
 const STATUS_CHIP: Record<string, string> = {
   lead: 'phos',
@@ -12,6 +12,7 @@ const STATUS_CHIP: Record<string, string> = {
 }
 
 export function DrugPanel() {
+  const PRISM_DATA = usePrismData()
   const candidates = PRISM_DATA.drugCandidates
   const [launched, setLaunched] = useState(false)
 

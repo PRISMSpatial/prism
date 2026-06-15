@@ -4,7 +4,8 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import gsap from 'gsap'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
+import type { Mutation } from '../../types/domain'
 
 interface MoleculeViewerProps {
   selectedSite: number | null
@@ -18,9 +19,6 @@ const CHAIN_COLORS = [
   new THREE.Color(0x9ef277), // phos
 ]
 
-// Antigenic sites from mutations data
-const SITES = PRISM_DATA.mutations.map(m => m.site)
-
 // Impact → glow color
 const IMPACT_COLORS: Record<string, THREE.Color> = {
   high: new THREE.Color(0xff6b4a),
@@ -28,7 +26,7 @@ const IMPACT_COLORS: Record<string, THREE.Color> = {
   low:  new THREE.Color(0x4cc9f0),
 }
 
-function buildTrimer(scene: THREE.Scene): {
+function buildTrimer(scene: THREE.Scene, mutations: Mutation[]): {
   chains: THREE.Mesh[]
   siteSpheres: Map<number, THREE.Mesh>
   glowSpheres: Map<number, THREE.Mesh>
@@ -67,8 +65,8 @@ function buildTrimer(scene: THREE.Scene): {
   }
 
   // Place mutation site markers on chain 0
-  PRISM_DATA.mutations.forEach((m, i) => {
-    const t = (i + 1) / (PRISM_DATA.mutations.length + 1)
+  mutations.forEach((m, i) => {
+    const t = (i + 1) / (mutations.length + 1)
     const angle = 0 // chain 0
     const baseR = 1.2
     const x = Math.cos(angle + t * 1.5) * baseR + Math.sin(t * Math.PI * 3.5) * 0.15
@@ -110,6 +108,7 @@ function buildTrimer(scene: THREE.Scene): {
 }
 
 export function MoleculeViewer({ selectedSite, onSelectSite }: MoleculeViewerProps) {
+  const PRISM_DATA = usePrismData()
   const mountRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef<number>()
   const selectedSiteRef = useRef(selectedSite)
@@ -143,7 +142,7 @@ export function MoleculeViewer({ selectedSite, onSelectSite }: MoleculeViewerPro
     fill.position.set(-3, -1, -3)
     scene.add(fill)
 
-    const { chains, siteSpheres, glowSpheres } = buildTrimer(scene)
+    const { chains, siteSpheres, glowSpheres } = buildTrimer(scene, PRISM_DATA.mutations)
 
     // Auto-rotation
     const group = new THREE.Group()

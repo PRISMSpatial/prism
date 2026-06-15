@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '../store'
-import { PRISM_DATA } from '../data/mock'
+import { usePrismData } from '../api/PrismDataProvider'
 import { TIER_COLORS, STATE_CHIP_CLASS } from '../types/domain'
 import { fadeVariants, DUR } from '../motion'
 
 export function Statusbar() {
+  const PRISM_DATA = usePrismData()
   const { selected, selectedClade, module } = useAppStore()
   const liveCount = PRISM_DATA.sources.filter(s => s.status === 'live' || s.status === 'fresh').length
 

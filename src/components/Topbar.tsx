@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../store'
-import { PRISM_DATA } from '../data/mock'
+import { usePrismData } from '../api/PrismDataProvider'
 
 const MODULE_LABELS: Record<string, string> = {
   compass: 'C.O.M.P.A.S.S.',
@@ -13,6 +13,7 @@ const MODULE_LABELS: Record<string, string> = {
 }
 
 export function Topbar() {
+  const PRISM_DATA = usePrismData()
   const { module, setCmdkOpen, setTweaksOpen } = useAppStore()
   const [utcNow, setUtcNow] = useState('')
 

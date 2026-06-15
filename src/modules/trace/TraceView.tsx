@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, staggerItem, slideUpVariants } from '../../motion'
 import { useAppStore } from '../../store'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 import type { Region, Metric, InboxItem } from '../../types/domain'
 import { TIER_CHIP_CLASS } from '../../types/domain'
 import { ConcordancePanel } from './ConcordancePanel'
@@ -27,6 +27,7 @@ interface HeatmapProps {
 }
 
 function Heatmap({ selectedCell, setSelectedCell, onOpenRegion }: HeatmapProps) {
+  const PRISM_DATA = usePrismData()
   const regions = ['NSK', 'CSP', 'VNM', 'JPN', 'USA', 'AUS', 'MEX', 'ZAF', 'GBR']
   const metrics = PRISM_DATA.metrics
   const cellW = 18, cellH = 18, gap = 2
@@ -228,6 +229,7 @@ interface InboxProps {
 }
 
 function Inbox({ onOpenRegion, onSelect, selectedId, filter, dismissed }: InboxProps) {
+  const PRISM_DATA = usePrismData()
   const statusColor = (s: string): string =>
     ({ new: 'hot', escalated: 'pink', monitoring: 'warm', dismissed: '' }[s] ?? '')
 
@@ -288,6 +290,7 @@ function Inbox({ onOpenRegion, onSelect, selectedId, filter, dismissed }: InboxP
 type InboxFilter = 'all' | 'new' | 'escalated'
 
 export default function TraceView() {
+  const PRISM_DATA = usePrismData()
   const setSelected = useAppStore(s => s.setSelected)
   const [sel, setSel] = useState<SelectedCell | null>(null)
   const [inboxSel, setInboxSel] = useState<InboxItem | null>(null)

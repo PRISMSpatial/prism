@@ -1,11 +1,17 @@
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { apiClient } from './client'
 import { PRISM_DATA } from '../data/mock'
-import type { Region, DataSource, HeatRow, ForecastData } from '../types/domain'
+import type {
+  Region, DataSource, HeatRow, ForecastData, IncidenceData,
+  Metric, InboxItem, NotebookCell, Pathogen, DrugCandidate, Clade,
+  Mutation, AlignmentChar, TreeNode, ReassortmentBridge,
+  SankeyFlow, RootToTipPoint,
+} from '../types/domain'
 
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true' || import.meta.env.DEV
+const USE_MOCK = import.meta.env.VITE_USE_MOCK
+  ? import.meta.env.VITE_USE_MOCK === 'true'
+  : import.meta.env.DEV
 
-// Helper: fall back to mock data when API is unavailable
 async function fetchOrMock<T>(url: string, mockData: T): Promise<T> {
   if (USE_MOCK) return mockData
   const res = await apiClient.get<T>(url)
@@ -47,8 +53,21 @@ export function useForecast(regionId?: string) {
   })
 }
 
+export function useIncidence() {
+  return useQuery<IncidenceData>({
+    queryKey: ['incidence'],
+    queryFn: () => fetchOrMock('/incidence', PRISM_DATA.incidence),
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function usePhylogeny() {
-  return useQuery({
+  return useQuery<{
+    tree: { nodes: TreeNode[]; reassortmentBridges: ReassortmentBridge[] }
+    sankey: SankeyFlow[]
+    rootToTip: RootToTipPoint[]
+    clades: Clade[]
+  }>({
     queryKey: ['phylogeny'],
     queryFn: () => fetchOrMock('/phylogeny', {
       tree: PRISM_DATA.tree,
@@ -61,13 +80,53 @@ export function usePhylogeny() {
 }
 
 export function useMolecule() {
-  return useQuery({
+  return useQuery<{ mutations: Mutation[]; alignment: AlignmentChar[] }>({
     queryKey: ['molecule'],
     queryFn: () => fetchOrMock('/molecule', {
       mutations: PRISM_DATA.mutations,
       alignment: PRISM_DATA.alignment,
     }),
     staleTime: 30 * 60_000,
+  })
+}
+
+export function usePathogen() {
+  return useQuery<Pathogen>({
+    queryKey: ['pathogen'],
+    queryFn: () => fetchOrMock('/pathogen', PRISM_DATA.pathogen),
+    staleTime: 60_000,
+  })
+}
+
+export function useMetrics() {
+  return useQuery<Metric[]>({
+    queryKey: ['metrics'],
+    queryFn: () => fetchOrMock('/metrics', PRISM_DATA.metrics),
+    staleTime: 60_000,
+  })
+}
+
+export function useInbox() {
+  return useQuery<InboxItem[]>({
+    queryKey: ['inbox'],
+    queryFn: () => fetchOrMock('/inbox', PRISM_DATA.inbox),
+    refetchInterval: 30_000,
+  })
+}
+
+export function useNotebook() {
+  return useQuery<NotebookCell[]>({
+    queryKey: ['notebook'],
+    queryFn: () => fetchOrMock('/notebook', PRISM_DATA.notebook),
+    staleTime: 60_000,
+  })
+}
+
+export function useDrugs() {
+  return useQuery<DrugCandidate[]>({
+    queryKey: ['drugs'],
+    queryFn: () => fetchOrMock('/drugs', PRISM_DATA.drugCandidates),
+    staleTime: 60_000,
   })
 }
 

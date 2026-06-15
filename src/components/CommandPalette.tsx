@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from '../store'
-import { PRISM_DATA } from '../data/mock'
+import { usePrismData } from '../api/PrismDataProvider'
 import type { ModuleId } from '../types/domain'
 import { backdropVariants, overlayVariants, staggerContainer, staggerItem } from '../motion'
 
@@ -14,6 +14,7 @@ interface CmdItem {
 }
 
 export function CommandPalette() {
+  const PRISM_DATA = usePrismData()
   const { cmdkOpen, setCmdkOpen, setModule, setSelected, setSelectedClade } = useAppStore()
   const [query, setQuery] = useState('')
   const [activeIdx, setActiveIdx] = useState(0)

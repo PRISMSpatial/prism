@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 import { useUpload, usePipelineRun, usePipelineStatus } from '../../api/queries'
 import type { DataSource, NotebookCell } from '../../types/domain'
 import { SOURCE_KIND_CHIP_CLASS, SOURCE_STATUS_CHIP_CLASS } from '../../types/domain'
@@ -51,6 +51,7 @@ function SourceCard({ s }: { s: DataSource }) {
 }
 
 function Notebook({ executedTo }: { executedTo: number }) {
+  const PRISM_DATA = usePrismData()
   return (
     <div className="notebook">
       {PRISM_DATA.notebook.map((cell: NotebookCell) => {
@@ -173,6 +174,7 @@ function UploadPanel() {
 }
 
 export default function VirsiftView() {
+  const PRISM_DATA = usePrismData()
   const totalCells = PRISM_DATA.notebook.length
   const [executedTo, setExecutedTo] = useState(totalCells) // start fully executed
   const [running, setRunning] = useState(false)

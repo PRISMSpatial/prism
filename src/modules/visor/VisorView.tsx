@@ -1,6 +1,6 @@
 /* VISOR — molecular structure + alignment ribbon + mutation table + drug design */
 import { useState } from 'react'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 import { MoleculeViewer } from './MoleculeViewer'
 import { DrugPanel } from './DrugPanel'
 
@@ -12,6 +12,7 @@ interface AlignmentRibbonProps {
 }
 
 function AlignmentRibbon({ selectedSite, setSelectedSite }: AlignmentRibbonProps) {
+  const PRISM_DATA = usePrismData()
   const cellW = 16, cellH = 22, rows = 4
   const perRow = Math.ceil(PRISM_DATA.alignment.length / rows)
 
@@ -95,6 +96,7 @@ interface MutationTableProps {
 }
 
 function MutationTable({ selectedSite, setSelectedSite }: MutationTableProps) {
+  const PRISM_DATA = usePrismData()
   return (
     <div className="mut-table">
       <div className="mut-head mono mute">

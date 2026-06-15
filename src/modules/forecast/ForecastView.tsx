@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import gsap from 'gsap'
 import { useAppStore } from '../../store'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 import { staggerItem } from '../../motion'
 
 // ─── types ───────────────────────────────────────────────────────────────────
@@ -17,6 +17,7 @@ interface FanChartProps {
 }
 
 function FanChart({ scenario }: FanChartProps) {
+  const PRISM_DATA = usePrismData()
   const fc = PRISM_DATA.forecast
   const W = 800, H = 280, PAD_L = 50, PAD_R = 20, PAD_T = 20, PAD_B = 30
   const n = fc.weeks
@@ -129,6 +130,7 @@ interface IncidenceChartProps {
 }
 
 function IncidenceChart({ scenario }: IncidenceChartProps) {
+  const PRISM_DATA = usePrismData()
   const inc = PRISM_DATA.incidence
   const W = 800, H = 160, PAD_L = 50, PAD_R = 20, PAD_T = 15, PAD_B = 25
   const n = inc.fit.length

@@ -1,6 +1,6 @@
 /* STREAM — phylogenetic Sankey + root-to-tip scatter */
 import { useAppStore } from '../../store'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 import { CLADE_COLORS } from '../../types/domain'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -15,6 +15,7 @@ interface PhyloTreeProps {
 }
 
 function PhyloTree({ selectedClade, setSelectedClade }: PhyloTreeProps) {
+  const PRISM_DATA = usePrismData()
   const nodes = PRISM_DATA.tree.nodes
   const byId = Object.fromEntries(nodes.map(n => [n.id, n]))
   const edges = nodes
@@ -103,6 +104,7 @@ interface SankeyProps {
 }
 
 function Sankey({ selectedClade, setSelectedClade }: SankeyProps) {
+  const PRISM_DATA = usePrismData()
   const W = 600, H = 260
 
   const cols = [
@@ -198,6 +200,7 @@ interface RootToTipProps {
 }
 
 function RootToTip({ selectedClade: _selectedClade }: RootToTipProps) {
+  const PRISM_DATA = usePrismData()
   const W = 600, H = 180, PAD = 30
   const pts = PRISM_DATA.rootToTip
   const tMin = 2022, tMax = 2025.5
@@ -271,6 +274,7 @@ interface CladeInspectorProps {
 }
 
 function CladeInspector({ clade }: CladeInspectorProps) {
+  const PRISM_DATA = usePrismData()
   const { setModule, setSelected } = useAppStore()
   const info = PRISM_DATA.clades.find(c => c.id === clade)
   if (!info) return (

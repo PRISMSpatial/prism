@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { staggerContainer, staggerItem, slideUpVariants } from '../../motion'
 import { useAppStore } from '../../store'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 import { TIER_CHIP_CLASS } from '../../types/domain'
 import { CompassGlobe } from './CompassGlobe'
 import { TemporalScrubber } from './TemporalScrubber'
@@ -9,6 +9,7 @@ import { TemporalScrubber } from './TemporalScrubber'
 // ─── Briefing rail (unchanged) ────────────────────────────────────────────────
 
 function BriefingRail() {
+  const PRISM_DATA = usePrismData()
   const { selected, setSelected, setModule } = useAppStore()
 
   return (

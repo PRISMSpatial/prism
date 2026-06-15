@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import * as THREE from 'three'
 import gsap from 'gsap'
 import { useAppStore } from '../../store'
-import { PRISM_DATA } from '../../data/mock'
+import { usePrismData } from '../../api/PrismDataProvider'
 import type { Region } from '../../types/domain'
 import { EPISPLAT_VERT, EPISPLAT_FRAG } from './shaders'
 import { PhyloFilaments } from './PhyloFilaments'
@@ -118,7 +118,7 @@ interface SceneRefs {
   rotX: number
 }
 
-function buildScene(canvas: HTMLDivElement, w: number, h: number): SceneRefs {
+function buildScene(canvas: HTMLDivElement, w: number, h: number, regions: Region[]): SceneRefs {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
   renderer.setSize(w, h)
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -180,8 +180,8 @@ function buildScene(canvas: HTMLDivElement, w: number, h: number): SceneRefs {
   ))
 
   // EpiSplat instanced billboard quads
-  const regionById = Object.fromEntries(PRISM_DATA.regions.map(r => [r.id, r]))
-  const N = PRISM_DATA.regions.length
+  const regionById = Object.fromEntries(regions.map(r => [r.id, r]))
+  const N = regions.length
 
   // Base quad geometry: 2 triangles forming a [-1,1] square
   const baseGeo = new THREE.InstancedBufferGeometry()
@@ -202,7 +202,7 @@ function buildScene(canvas: HTMLDivElement, w: number, h: number): SceneRefs {
 
   const splatWorldPositions: THREE.Vector3[] = []
 
-  PRISM_DATA.regions.forEach((r, i) => {
+  regions.forEach((r, i) => {
     const pos = ll2xyz(r.lat, r.lon, R + 0.015) // slightly above surface
     splatWorldPositions.push(pos)
     aWorldPos[i*3]   = pos.x
@@ -308,6 +308,7 @@ function buildScene(canvas: HTMLDivElement, w: number, h: number): SceneRefs {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function CompassGlobe() {
+  const PRISM_DATA = usePrismData()
   const mountRef   = useRef<HTMLDivElement>(null)
   const sceneRef   = useRef<SceneRefs | null>(null)
   const selectedRef = useRef<Region | null>(null)
@@ -564,7 +565,7 @@ export function CompassGlobe() {
   useEffect(() => {
     const el = mountRef.current
     if (!el) return
-    const refs = buildScene(el, el.clientWidth || 800, el.clientHeight || 600)
+    const refs = buildScene(el, el.clientWidth || 800, el.clientHeight || 600, PRISM_DATA.regions)
     sceneRef.current = refs
     const { renderer, scene, camera, earth } = refs
 
