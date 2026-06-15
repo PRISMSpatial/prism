@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routers import data, upload, pipeline, export
+from app.virsift.router import router as virsift_router
 
 
 @asynccontextmanager
@@ -41,6 +42,7 @@ app.include_router(data.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(pipeline.router, prefix="/api")
 app.include_router(export.router, prefix="/api")
+app.include_router(virsift_router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -167,10 +167,113 @@ export function usePipelineStatus(runId: string | null) {
   })
 }
 
+// ─── VirSift hooks ─────────────────────────────────────────────────────────
+
+import type {
+  VirsiftParseSummary, VirsiftSessionInfo, VirsiftSequenceRow,
+  VirsiftFilterResult, VirsiftSampleResult, VirsiftTimeline,
+  VirsiftFieldInfo,
+} from '../types/domain'
+
+export function useVirsiftParse() {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await apiClient.post('/virsift/parse', form)
+      return res.data as VirsiftParseSummary
+    },
+  })
+}
+
+export function useVirsiftSession(sessionId: string | null) {
+  return useQuery<VirsiftSessionInfo>({
+    queryKey: ['virsift-session', sessionId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/virsift/sessions/${sessionId}`)
+      return res.data
+    },
+    enabled: !!sessionId,
+  })
+}
+
+export function useVirsiftSequences(sessionId: string | null, offset = 0, limit = 100) {
+  return useQuery<{ total: number; offset: number; limit: number; rows: VirsiftSequenceRow[] }>({
+    queryKey: ['virsift-sequences', sessionId, offset, limit],
+    queryFn: async () => {
+      const res = await apiClient.get(`/virsift/sessions/${sessionId}/sequences?offset=${offset}&limit=${limit}`)
+      return res.data
+    },
+    enabled: !!sessionId,
+  })
+}
+
+export function useVirsiftFields(sessionId: string | null) {
+  return useQuery<Record<string, VirsiftFieldInfo>>({
+    queryKey: ['virsift-fields', sessionId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/virsift/sessions/${sessionId}/fields`)
+      return res.data
+    },
+    enabled: !!sessionId,
+  })
+}
+
+export function useVirsiftFilter() {
+  return useMutation({
+    mutationFn: async (req: { session_id: string; rules: { field: string; operator: string; value: string | string[] }[] }) => {
+      const res = await apiClient.post('/virsift/filter', req)
+      return res.data as VirsiftFilterResult
+    },
+  })
+}
+
+export function useVirsiftQualityFilter() {
+  return useMutation({
+    mutationFn: async (req: { session_id: string; min_length?: number; max_n_run?: number; deduplicate?: boolean; dedup_mode?: string }) => {
+      const res = await apiClient.post('/virsift/quality-filter', req)
+      return res.data as VirsiftFilterResult
+    },
+  })
+}
+
+export function useVirsiftSample() {
+  return useMutation({
+    mutationFn: async (req: { session_id: string; category?: string }) => {
+      const res = await apiClient.post('/virsift/sample', req)
+      return res.data as VirsiftSampleResult
+    },
+  })
+}
+
+export function useVirsiftTimeline(sessionId: string | null) {
+  return useQuery<VirsiftTimeline>({
+    queryKey: ['virsift-timeline', sessionId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/virsift/timeline/${sessionId}`)
+      return res.data
+    },
+    enabled: !!sessionId,
+  })
+}
+
+export function useVirsiftReset() {
+  return useMutation({
+    mutationFn: async (sessionId: string) => {
+      const res = await apiClient.post(`/virsift/reset/${sessionId}`)
+      return res.data as { session_id: string; count: number; status: string }
+    },
+  })
+}
+
 // ─── Export helpers ──────────────────────────────────────────────────────────
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export function downloadExport(format: 'csv' | 'json' | 'report') {
   window.open(`${API_BASE}/export/${format}`, '_blank')
+}
+
+export function downloadVirsiftExport(sessionId: string) {
+  window.open(`${API_BASE}/virsift/export/${sessionId}`, '_blank')
 }

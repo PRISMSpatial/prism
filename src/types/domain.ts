@@ -178,6 +178,83 @@ export interface DrugCandidate {
   status: 'lead' | 'candidate' | 'preclinical' | 'screening'
 }
 
+// ─── VirSift types ─────────────────────────────────────────────────────────
+
+export interface VirsiftParseSummary {
+  session_id: string
+  filename: string
+  total_sequences: number
+  parse_time_seconds: number
+  subtypes: Record<string, number>
+  hosts: Record<string, number>
+  segments: Record<string, number>
+  date_range: [string | null, string | null]
+  locations: Record<string, number>
+}
+
+export interface VirsiftSessionInfo {
+  session_id: string
+  filename: string
+  total_sequences: number
+  current_count: number
+  subtypes: Record<string, number>
+  hosts: Record<string, number>
+}
+
+export interface VirsiftSequenceRow {
+  isolate: string
+  subtype: string
+  subtype_clean: string
+  segment: string
+  collection_date: string | null
+  accession: string
+  clade: string
+  host: string
+  location: string
+  sequence_length: number
+  sequence_hash: string
+}
+
+export interface VirsiftFilterResult {
+  before_count: number
+  after_count: number
+  removed_count: number
+}
+
+export interface VirsiftSampleResult {
+  before_count: number
+  after_count: number
+  lifespan_category: string
+  reduction_pct: number
+}
+
+export interface VirsiftTimelinePoint {
+  period: string
+  count: number
+}
+
+export interface VirsiftWavePeak {
+  date: string
+  count: number
+  type: string
+  rank: number | null
+}
+
+export interface VirsiftTimeline {
+  weekly_counts: VirsiftTimelinePoint[]
+  peaks: VirsiftWavePeak[]
+  troughs: VirsiftWavePeak[]
+  off_season_clusters: VirsiftWavePeak[]
+  wave_count: number
+  lifespan_category: string
+}
+
+export interface VirsiftFieldInfo {
+  populated_pct: number
+  n_unique: number
+  sample_values: string[]
+}
+
 export interface PrismData {
   now: string
   pathogen: Pathogen
