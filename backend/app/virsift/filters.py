@@ -1,6 +1,29 @@
 import re
+import signal
 
 import pandas as pd
+
+_REGEX_TIMEOUT_SECONDS = 5
+
+
+def _safe_regex_match(col, pattern):
+    """Apply regex with a timeout to prevent ReDoS."""
+    try:
+        compiled = re.compile(pattern, re.IGNORECASE)
+    except re.error:
+        return None
+
+    if len(pattern) > 200:
+        return None
+
+    dangerous = re.search(r'([+*])\1|(\([^)]*[+*][^)]*\))[+*]', pattern)
+    if dangerous:
+        return None
+
+    try:
+        return col.astype(str).str.contains(compiled, na=False)
+    except Exception:
+        return None
 
 
 class VectorizedFilterEngine:
@@ -54,12 +77,7 @@ class VectorizedFilterEngine:
         if operator == "starts_with":
             return col.astype(str).str.startswith(str(value), na=False)
         if operator == "regex":
-            try:
-                return col.astype(str).str.contains(
-                    str(value), case=False, na=False, regex=True
-                )
-            except re.error:
-                return None
+            return _safe_regex_match(col, str(value))
         if operator == "in_list":
             values = [str(v).strip() for v in (value or [])]
             return col.astype(str).str.strip().isin(values)

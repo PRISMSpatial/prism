@@ -176,7 +176,7 @@ function FilterPanel({ sessionId, onApplied }: { sessionId: string; onApplied: (
             onChange={e => setOperator(e.target.value)}
             style={{ background: 'var(--ink-2)', color: 'var(--fg)', border: '1px solid var(--line-soft)', padding: '4px 6px', fontSize: 10, fontFamily: 'var(--mono)' }}
           >
-            {['contains', 'equals', 'not_equals', 'not_contains', 'starts_with', 'regex', 'in_list'].map(op => (
+            {['contains', 'equals', 'not_equals', 'not_contains', 'starts_with', 'regex', 'in_list', 'date_range'].map(op => (
               <option key={op} value={op}>{op}</option>
             ))}
           </select>

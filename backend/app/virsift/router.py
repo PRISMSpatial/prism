@@ -1,10 +1,14 @@
 """VirSift REST API — sequence curation endpoints."""
 
+import re
 import uuid
 
 import pandas as pd
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi.responses import PlainTextResponse
+
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+MAX_DECOMPRESSED_BYTES = 200 * 1024 * 1024  # 200 MB
 
 from app.virsift.parser import parse_gisaid_fasta, decompress_if_needed, convert_df_to_fasta
 from app.virsift.filters import VectorizedFilterEngine
@@ -68,9 +72,14 @@ def _build_summary(session_id: str, filename: str, df: pd.DataFrame, parse_time:
 @router.post("/parse", response_model=ParseSummary)
 async def parse_fasta(file: UploadFile = File(...)):
     raw_bytes = await file.read()
+    if len(raw_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, f"File too large. Maximum upload size is {MAX_UPLOAD_BYTES // (1024*1024)} MB")
     filename = file.filename or "unknown.fa"
 
-    file_content = decompress_if_needed(raw_bytes, filename)
+    try:
+        file_content = decompress_if_needed(raw_bytes, filename, MAX_DECOMPRESSED_BYTES)
+    except ValueError as e:
+        raise HTTPException(413, str(e))
     sequences, parse_time = parse_gisaid_fasta(file_content, filename)
 
     if not sequences:
@@ -102,6 +111,10 @@ async def get_session(session_id: str):
 
 @router.get("/sessions/{session_id}/sequences")
 async def get_sequences(session_id: str, offset: int = 0, limit: int = 100):
+    if offset < 0:
+        offset = 0
+    if limit < 1 or limit > 500:
+        limit = min(max(limit, 1), 500)
     s = _get_session(session_id)
     df = s.working_df
     page = df.iloc[offset:offset + limit]
@@ -218,7 +231,8 @@ async def reset_session(session_id: str):
 async def export_fasta(session_id: str):
     s = _get_session(session_id)
     fasta_str = convert_df_to_fasta(s.working_df)
-    filename = f"curated_{s.filename}"
+    safe_name = re.sub(r'[^\w.\-]', '_', s.filename)
+    filename = f"curated_{safe_name}"
     return PlainTextResponse(
         content=fasta_str,
         media_type="text/plain",

@@ -2,9 +2,15 @@
 
 Each upload creates a session with a DataFrame of parsed sequences.
 Filter/sample operations mutate the session's working DataFrame.
+Sessions are evicted after TTL or when the max count is reached.
 """
 
+import time
+
 import pandas as pd
+
+MAX_SESSIONS = 20
+SESSION_TTL_SECONDS = 3600  # 1 hour
 
 
 class VirsiftSession:
@@ -13,6 +19,8 @@ class VirsiftSession:
         self.filename = filename
         self.original_df = df.copy()
         self.working_df = df.copy()
+        self.created_at = time.monotonic()
+        self.last_accessed = time.monotonic()
 
     @property
     def original_count(self) -> int:
@@ -25,18 +33,41 @@ class VirsiftSession:
     def reset(self):
         self.working_df = self.original_df.copy()
 
+    def touch(self):
+        self.last_accessed = time.monotonic()
+
 
 class VirsiftSessionStore:
     def __init__(self):
         self.sessions: dict[str, VirsiftSession] = {}
 
+    def _evict_expired(self):
+        now = time.monotonic()
+        expired = [
+            sid for sid, s in self.sessions.items()
+            if now - s.last_accessed > SESSION_TTL_SECONDS
+        ]
+        for sid in expired:
+            del self.sessions[sid]
+
+    def _evict_oldest_if_full(self):
+        if len(self.sessions) >= MAX_SESSIONS:
+            oldest = min(self.sessions.values(), key=lambda s: s.last_accessed)
+            del self.sessions[oldest.session_id]
+
     def create(self, session_id: str, filename: str, df: pd.DataFrame) -> VirsiftSession:
+        self._evict_expired()
+        self._evict_oldest_if_full()
         session = VirsiftSession(session_id, filename, df)
         self.sessions[session_id] = session
         return session
 
     def get(self, session_id: str) -> VirsiftSession | None:
-        return self.sessions.get(session_id)
+        self._evict_expired()
+        session = self.sessions.get(session_id)
+        if session:
+            session.touch()
+        return session
 
 
 virsift_store = VirsiftSessionStore()

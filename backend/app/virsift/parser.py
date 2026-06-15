@@ -198,14 +198,20 @@ def parse_gisaid_fasta(file_content: str, file_name: str) -> tuple:
     return sequences, parsing_time
 
 
-def decompress_if_needed(raw_bytes: bytes, file_name: str) -> str:
+def decompress_if_needed(raw_bytes: bytes, file_name: str, max_decompressed: int = 200 * 1024 * 1024) -> str:
     import os as _os
     name_lower = file_name.lower()
     try:
         if name_lower.endswith(".gz"):
-            return gzip.decompress(raw_bytes).decode("utf-8", errors="replace")
+            decompressed = gzip.decompress(raw_bytes)
+            if len(decompressed) > max_decompressed:
+                raise ValueError(f"Decompressed size ({len(decompressed)}) exceeds limit ({max_decompressed})")
+            return decompressed.decode("utf-8", errors="replace")
         if name_lower.endswith(".zip"):
             with zipfile.ZipFile(io.BytesIO(raw_bytes)) as zf:
+                total_size = sum(info.file_size for info in zf.infolist())
+                if total_size > max_decompressed:
+                    raise ValueError(f"Archive total size ({total_size}) exceeds limit ({max_decompressed})")
                 fasta_exts = (".fasta", ".fa", ".fas", ".fna", ".txt", ".aln-fasta")
                 fasta_members = sorted([
                     m for m in zf.namelist()
@@ -222,8 +228,12 @@ def decompress_if_needed(raw_bytes: bytes, file_name: str) -> str:
                 if zf.namelist():
                     with zf.open(zf.namelist()[0]) as f:
                         return f.read().decode("utf-8", errors="replace")
+    except ValueError:
+        raise
     except Exception:
         pass
+    if len(raw_bytes) > max_decompressed:
+        raise ValueError(f"File size ({len(raw_bytes)}) exceeds limit ({max_decompressed})")
     return raw_bytes.decode("utf-8", errors="replace")
 
 
