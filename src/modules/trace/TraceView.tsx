@@ -294,6 +294,14 @@ export default function TraceView() {
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all')
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
 
+  const filteredCount = PRISM_DATA.inbox.filter(it => {
+    if (dismissed.has(it.id)) return false
+    if (inboxFilter === 'all') return true
+    if (inboxFilter === 'new') return it.status === 'new'
+    if (inboxFilter === 'escalated') return it.status === 'escalated'
+    return true
+  }).length
+
   return (
     <div className="trace-view">
       <div className="panel" style={{ gridArea: 'heat' }}>
@@ -318,7 +326,7 @@ export default function TraceView() {
 
       <div className="panel" style={{ gridArea: 'inbox' }}>
         <div className="panel-head">
-          <span className="title"><b>INBOX</b>  /  7 anomalies</span>
+          <span className="title"><b>INBOX</b>  /  {filteredCount} anomalies</span>
           <span className="grow" />
           <span className="row" style={{ gap: 4 }}>
             {(['all', 'new', 'escalated'] as InboxFilter[]).map(f => (

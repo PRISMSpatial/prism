@@ -78,9 +78,7 @@ export function useUpload() {
     mutationFn: async (file: File) => {
       const form = new FormData()
       form.append('file', file)
-      const res = await apiClient.post('/upload', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const res = await apiClient.post('/upload', form)
       return res.data as { upload_id: string; filename: string; seq_count: number }
     },
   })
@@ -103,7 +101,10 @@ export function usePipelineStatus(runId: string | null) {
       return res.data as { run_id: string; status: string; current_stage: string | null; progress: number }
     },
     enabled: !!runId,
-    refetchInterval: 1000,
+    refetchInterval: (query) => {
+      const s = query.state.data?.status
+      return s === 'completed' || s === 'failed' ? false : 1000
+    },
   })
 }
 

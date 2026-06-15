@@ -189,7 +189,7 @@ class TreeData(BaseModel):
 
 
 class PhylogenyResponse(BaseModel):
-    tree: TreeData
+    tree: TreeData | None = None
     sankey: list[SankeyFlow]
     rootToTip: list[RootToTipPoint]
     clades: list[Clade]

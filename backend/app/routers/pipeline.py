@@ -10,23 +10,26 @@ router = APIRouter(tags=["pipeline"])
 
 STAGES = ["virsift", "metrics", "antigenic", "phylogeny", "seir", "clustering", "episplat"]
 
+_background_tasks: set[asyncio.Task] = set()
+
 
 async def _run_pipeline(run_id: str, upload_id: str):
     """Background task: execute pipeline stages sequentially."""
     run = store.pipeline_runs[run_id]
     run.status = "running"
-
-    for i, stage in enumerate(STAGES):
-        run.current_stage = stage
-        run.progress = i / len(STAGES)
-        store.pipeline_runs[run_id] = run
-        # Simulate processing (replace with real stage logic)
-        await asyncio.sleep(1.5)
-
-    run.status = "completed"
-    run.progress = 1.0
-    run.current_stage = None
-    run.completed_at = datetime.now(timezone.utc).isoformat()
+    try:
+        for i, stage in enumerate(STAGES):
+            run.current_stage = stage
+            run.progress = (i + 1) / len(STAGES)
+            store.pipeline_runs[run_id] = run
+            await asyncio.sleep(1.5)
+        run.status = "completed"
+        run.progress = 1.0
+        run.current_stage = None
+        run.completed_at = datetime.now(timezone.utc).isoformat()
+    except Exception as exc:
+        run.status = "failed"
+        run.error = str(exc)
     store.pipeline_runs[run_id] = run
 
 
@@ -39,7 +42,9 @@ async def run_pipeline(upload_id: str = "demo"):
         started_at=datetime.now(timezone.utc).isoformat(),
     )
     store.pipeline_runs[run_id] = run
-    asyncio.create_task(_run_pipeline(run_id, upload_id))
+    task = asyncio.create_task(_run_pipeline(run_id, upload_id))
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
     return run
 
 

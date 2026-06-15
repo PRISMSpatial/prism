@@ -1,5 +1,5 @@
 """Data serving endpoints — matches frontend React Query hooks in queries.ts"""
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.storage.store import store
 from app.models.domain import (
     Region, DataSource, HeatRow, ForecastData, IncidenceData, InboxItem,
@@ -55,6 +55,8 @@ async def get_molecule():
 
 @router.get("/pathogen")
 async def get_pathogen():
+    if not store.pathogen:
+        raise HTTPException(404, "No pathogen data loaded")
     return store.pathogen
 
 
