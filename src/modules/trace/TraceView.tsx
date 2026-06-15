@@ -78,7 +78,7 @@ function Heatmap({ selectedCell, setSelectedCell, onOpenRegion }: HeatmapProps) 
                 {/* Cells: for each metric → aggregate cell with inner sparkbars */}
                 {metrics.map((m, mi) => {
                   const vals = heatByKey[`${r}:${m.id}`] || []
-                  const maxV = Math.max(...vals)
+                  const maxV = vals.length ? Math.max(...vals) : 0
                   const x0 = labelW + mi * (cellW + gap) * 1.7
                   const isSel = selectedCell?.r === r && selectedCell?.m === m.id
                   return (
@@ -258,7 +258,7 @@ function Inbox({ onOpenRegion, onSelect, selectedId, filter, dismissed }: InboxP
             <motion.button
               whileHover={{ x: 2 }}
               className={'inbox-item' + (active ? ' active' : '') + (it.status === 'dismissed' ? ' dismissed' : '') + (it.score > 0.7 ? ' critical' : '')}
-              onClick={() => { onSelect(it); onOpenRegion(reg) }}
+              onClick={() => { onSelect(it); if (reg) onOpenRegion(reg) }}
             >
               <div className="inbox-score">
                 <div

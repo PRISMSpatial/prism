@@ -46,7 +46,9 @@ function ReportFanChart() {
 
 export default function ReportView() {
   const PRISM_DATA = usePrismData()
-  const nsk = PRISM_DATA.regions.find(r => r.id === 'NSK')!
+  const nsk = PRISM_DATA.regions.find(r => r.id === 'NSK')
+
+  if (!nsk) return <div className="paper-root"><p style={{ padding: 40, color: 'var(--fg-dim)' }}>No data for region NSK.</p></div>
 
   return (
     <div className="paper-root">
