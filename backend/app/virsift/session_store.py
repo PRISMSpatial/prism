@@ -14,11 +14,18 @@ SESSION_TTL_SECONDS = 3600  # 1 hour
 
 
 class VirsiftSession:
-    def __init__(self, session_id: str, filename: str, df: pd.DataFrame):
+    def __init__(self, session_id: str, filename: str, df: pd.DataFrame,
+                 header_variant: str = "Unknown", confidence: float = 0.0,
+                 parse_time: float = 0.0, source: str = "GISAID EpiFlu"):
         self.session_id = session_id
         self.filename = filename
         self.original_df = df.copy()
         self.working_df = df.copy()
+        self.header_variant = header_variant
+        self.confidence = confidence
+        self.parse_time = parse_time
+        self.source = source
+        self.status = "active"
         self.created_at = time.monotonic()
         self.last_accessed = time.monotonic()
 
@@ -55,10 +62,10 @@ class VirsiftSessionStore:
             oldest = min(self.sessions.values(), key=lambda s: s.last_accessed)
             del self.sessions[oldest.session_id]
 
-    def create(self, session_id: str, filename: str, df: pd.DataFrame) -> VirsiftSession:
+    def create(self, session_id: str, filename: str, df: pd.DataFrame, **kwargs) -> VirsiftSession:
         self._evict_expired()
         self._evict_oldest_if_full()
-        session = VirsiftSession(session_id, filename, df)
+        session = VirsiftSession(session_id, filename, df, **kwargs)
         self.sessions[session_id] = session
         return session
 

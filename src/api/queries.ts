@@ -169,6 +169,39 @@ export function usePipelineStatus(runId: string | null) {
 
 // ─── VirSift hooks ─────────────────────────────────────────────────────────
 
+import type { ForecastRunResult } from '../types/domain'
+
+// ─── Forecast SEIR hooks ────────────────────────────────────────────────
+
+export function useForecastRun() {
+  return useMutation({
+    mutationFn: async (req: { observed_weekly: number[]; population: number; horizon_weeks: number; n_draws: number }) => {
+      const res = await apiClient.post('/forecast/run', req)
+      return res.data as ForecastRunResult
+    },
+  })
+}
+
+export function useForecastFromVirsift() {
+  return useMutation({
+    mutationFn: async ({ virsiftSessionId, ...body }: { virsiftSessionId: string; population: number; horizon_weeks: number; n_draws: number }) => {
+      const res = await apiClient.post(`/forecast/from-virsift/${virsiftSessionId}`, body)
+      return res.data as ForecastRunResult
+    },
+  })
+}
+
+export function useForecastSession(sessionId: string | null) {
+  return useQuery<ForecastRunResult>({
+    queryKey: ['forecast-session', sessionId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/forecast/session/${sessionId}`)
+      return res.data
+    },
+    enabled: !!sessionId,
+  })
+}
+
 import type {
   VirsiftParseSummary, VirsiftSessionInfo, VirsiftSequenceRow,
   VirsiftFilterResult, VirsiftSampleResult, VirsiftTimeline,
@@ -257,6 +290,57 @@ export function useVirsiftTimeline(sessionId: string | null) {
   })
 }
 
+export function useVirsiftWorkspace() {
+  return useQuery<import('../types/domain').WorkspaceFile[]>({
+    queryKey: ['virsift-workspace'],
+    queryFn: async () => {
+      const res = await apiClient.get('/virsift/workspace')
+      return res.data
+    },
+    refetchInterval: 10_000,
+  })
+}
+
+export function useVirsiftValidation(sessionId: string | null) {
+  return useQuery<import('../types/domain').ValidationResult>({
+    queryKey: ['virsift-validation', sessionId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/virsift/sessions/${sessionId}/validation`)
+      return res.data
+    },
+    enabled: !!sessionId,
+  })
+}
+
+export function useVirsiftSummary(sessionId: string | null) {
+  return useQuery<import('../types/domain').DatasetSummary>({
+    queryKey: ['virsift-summary', sessionId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/virsift/sessions/${sessionId}/summary`)
+      return res.data
+    },
+    enabled: !!sessionId,
+  })
+}
+
+export function useVirsiftMerge() {
+  return useMutation({
+    mutationFn: async (sessionIds: string[]) => {
+      const res = await apiClient.post('/virsift/merge', { session_ids: sessionIds })
+      return res.data as { session_id: string; filename: string; total_sequences: number; source_files: string[] }
+    },
+  })
+}
+
+export function useVirsiftFetchUrl() {
+  return useMutation({
+    mutationFn: async (url: string) => {
+      const res = await apiClient.post('/virsift/fetch-url', { url })
+      return res.data as import('../types/domain').VirsiftParseSummary
+    },
+  })
+}
+
 export function useVirsiftReset() {
   return useMutation({
     mutationFn: async (sessionId: string) => {
@@ -266,12 +350,51 @@ export function useVirsiftReset() {
   })
 }
 
+// ─── Report hooks ──────────────────────────────────────────────────────────
+
+import type { ReportData, ReportHistoryItem } from '../types/domain'
+
+export function useReportGenerate() {
+  return useMutation({
+    mutationFn: async (req: { region_id: string; forecast_session_id?: string; virsift_session_id?: string; report_type?: string }) => {
+      const res = await apiClient.post('/report/generate', req)
+      return res.data as ReportData
+    },
+  })
+}
+
+export function useReportHistory() {
+  return useQuery<ReportHistoryItem[]>({
+    queryKey: ['report-history'],
+    queryFn: async () => {
+      const res = await apiClient.get('/report/history')
+      return res.data
+    },
+    staleTime: 60_000,
+  })
+}
+
+export function useReport(reportId: string | null) {
+  return useQuery<ReportData>({
+    queryKey: ['report', reportId],
+    queryFn: async () => {
+      const res = await apiClient.get(`/report/${reportId}`)
+      return res.data
+    },
+    enabled: !!reportId,
+  })
+}
+
 // ─── Export helpers ──────────────────────────────────────────────────────────
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? '/api'
 
 export function downloadExport(format: 'csv' | 'json' | 'report') {
   window.open(`${API_BASE}/export/${format}`, '_blank')
+}
+
+export function downloadReportExport(reportId: string, format: 'csv' | 'json') {
+  window.open(`${API_BASE}/report/${reportId}/export/${format}`, '_blank')
 }
 
 export function downloadVirsiftExport(sessionId: string) {

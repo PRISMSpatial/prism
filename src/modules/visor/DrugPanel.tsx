@@ -56,7 +56,7 @@ export function DrugPanel() {
       </button>
       {launched && (
         <div className="mono mute" style={{ fontSize: 9, marginTop: 6 }}>
-          Docking simulation queued · HA1 Sa/Sb pocket · {candidates.length} compounds
+          Docking simulation queued · HA1 Sa/Sb pocket · {candidates.length} compound{candidates.length !== 1 ? 's' : ''}
         </div>
       )}
     </div>

@@ -1,11 +1,30 @@
 /* STREAM — phylogenetic Sankey + root-to-tip scatter */
+import { useMemo } from 'react'
 import { useAppStore } from '../../store'
 import { usePrismData } from '../../api/PrismDataProvider'
 import { CLADE_COLORS } from '../../types/domain'
+import type { RootToTipPoint } from '../../types/domain'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 const cladeColor = (c: string): string => CLADE_COLORS[c] ?? 'var(--fg-mute)'
+
+function linReg(pts: RootToTipPoint[]) {
+  const n = pts.length
+  if (n < 2) return { slope: 0, intercept: 0, r2: 0 }
+  const sx = pts.reduce((a, p) => a + p.t, 0)
+  const sy = pts.reduce((a, p) => a + p.d, 0)
+  const sxx = pts.reduce((a, p) => a + p.t * p.t, 0)
+  const sxy = pts.reduce((a, p) => a + p.t * p.d, 0)
+  const syy = pts.reduce((a, p) => a + p.d * p.d, 0)
+  const denom = n * sxx - sx * sx
+  const slope = denom ? (n * sxy - sx * sy) / denom : 0
+  const intercept = (sy - slope * sx) / n
+  const ssRes = pts.reduce((a, p) => a + (p.d - (slope * p.t + intercept)) ** 2, 0)
+  const ssTot = syy - (sy * sy) / n
+  const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0
+  return { slope, intercept, r2 }
+}
 
 // ─── PhyloTree ───────────────────────────────────────────────────────────────
 
@@ -197,51 +216,70 @@ function Sankey({ selectedClade, setSelectedClade }: SankeyProps) {
 
 interface RootToTipProps {
   selectedClade: string | null
+  reg: { slope: number; intercept: number; r2: number }
+  clockLabel: string
 }
 
-function RootToTip({ selectedClade: _selectedClade }: RootToTipProps) {
+function RootToTip({ selectedClade: _selectedClade, reg, clockLabel }: RootToTipProps) {
   const PRISM_DATA = usePrismData()
   const W = 600, H = 180, PAD = 30
   const pts = PRISM_DATA.rootToTip
-  const tMin = 2022, tMax = 2025.5
-  const dMin = 0, dMax = 0.012
+
+  const n = pts.length
+
+  const tMin = useMemo(() => Math.floor(Math.min(...pts.map(p => p.t))), [pts])
+  const tMax = useMemo(() => Math.ceil(Math.max(...pts.map(p => p.t)) * 2) / 2, [pts])
+  const dMax = useMemo(() => {
+    const m = Math.max(...pts.map(p => p.d))
+    return Math.ceil(m * 1000) / 1000 + 0.001
+  }, [pts])
+  const dMin = 0
+
   const tx = (t: number) => PAD + ((t - tMin) / (tMax - tMin)) * (W - PAD * 2)
   const dy = (d: number) => (H - PAD) - ((d - dMin) / (dMax - dMin)) * (H - PAD * 2)
 
-  // Regression: divergence = slope * (t - 2022) + intercept
-  const slope = 0.0028, intercept = 0.0005
-  const xs = [tMin, tMax]
-  const ys = xs.map(x => slope * (x - 2022) + intercept)
+  const regY0 = reg.slope * tMin + reg.intercept
+  const regY1 = reg.slope * tMax + reg.intercept
+
+  const tTicks = useMemo(() => {
+    const ticks: number[] = []
+    for (let y = tMin; y <= Math.floor(tMax); y++) ticks.push(y)
+    return ticks
+  }, [tMin, tMax])
+
+  const dTicks = useMemo(() => {
+    const step = dMax > 0.02 ? 0.005 : dMax > 0.008 ? 0.004 : 0.002
+    const ticks: number[] = []
+    for (let v = 0; v <= dMax; v += step) ticks.push(parseFloat(v.toFixed(4)))
+    return ticks
+  }, [dMax])
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="rtt-svg">
-      {/* Axes */}
       <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="#22303f" strokeWidth="1" />
       <line x1={PAD} y1={PAD / 2} x2={PAD} y2={H - PAD} stroke="#22303f" strokeWidth="1" />
-      {[2022, 2023, 2024, 2025].map(t => (
+      {tTicks.map(t => (
         <g key={t}>
           <line x1={tx(t)} y1={H - PAD} x2={tx(t)} y2={H - PAD + 3} stroke="#48576a" strokeWidth="1" />
           <text x={tx(t)} y={H - PAD + 13} textAnchor="middle" fill="#6f7e91" fontFamily="JetBrains Mono, monospace" fontSize="8">{t}</text>
         </g>
       ))}
-      {[0, 0.004, 0.008, 0.012].map(d => (
+      {dTicks.map(d => (
         <g key={d}>
           <line x1={PAD - 3} y1={dy(d)} x2={PAD} y2={dy(d)} stroke="#48576a" strokeWidth="1" />
           <text x={PAD - 6} y={dy(d) + 3} textAnchor="end" fill="#6f7e91" fontFamily="JetBrains Mono, monospace" fontSize="8">{d.toFixed(3)}</text>
         </g>
       ))}
 
-      {/* Regression line */}
       <line
-        x1={tx(xs[0])} y1={dy(ys[0])}
-        x2={tx(xs[1])} y2={dy(ys[1])}
+        x1={tx(tMin)} y1={dy(regY0)}
+        x2={tx(tMax)} y2={dy(regY1)}
         stroke="var(--signal-phos)"
         strokeWidth="1"
         strokeDasharray="3 3"
         opacity="0.6"
       />
 
-      {/* Points */}
       {pts.map((p, i) => (
         <circle
           key={i}
@@ -253,14 +291,12 @@ function RootToTip({ selectedClade: _selectedClade }: RootToTipProps) {
         />
       ))}
 
-      {/* Stats */}
       <g fontFamily="JetBrains Mono, monospace" fontSize="9">
-        <text x={W - PAD - 2} y={PAD + 8} textAnchor="end" fill="#a6b2c2">n = <tspan fill="#e7ecf2">47</tspan></text>
-        <text x={W - PAD - 2} y={PAD + 22} textAnchor="end" fill="#a6b2c2">R² = <tspan fill="#e7ecf2">0.64</tspan></text>
-        <text x={W - PAD - 2} y={PAD + 36} textAnchor="end" fill="#a6b2c2">μ = <tspan fill="#e7ecf2">3.4e−3</tspan> subs/site/yr</text>
+        <text x={W - PAD - 2} y={PAD + 8} textAnchor="end" fill="#a6b2c2">n = <tspan fill="#e7ecf2">{n}</tspan></text>
+        <text x={W - PAD - 2} y={PAD + 22} textAnchor="end" fill="#a6b2c2">R² = <tspan fill="#e7ecf2">{reg.r2.toFixed(2)}</tspan></text>
+        <text x={W - PAD - 2} y={PAD + 36} textAnchor="end" fill="#a6b2c2">μ = <tspan fill="#e7ecf2">{clockLabel}</tspan> subs/site/yr</text>
       </g>
 
-      {/* Axis labels */}
       <text x={W / 2} y={H - 4} textAnchor="middle" fill="#6f7e91" fontFamily="JetBrains Mono, monospace" fontSize="8" letterSpacing="1">SAMPLING DATE →</text>
       <text x={10} y={H / 2} fill="#6f7e91" fontFamily="JetBrains Mono, monospace" fontSize="8" letterSpacing="1" transform={`rotate(-90 10 ${H / 2})`}>ROOT DIVERGENCE →</text>
     </svg>
@@ -290,6 +326,23 @@ function CladeInspector({ clade }: CladeInspectorProps) {
     'B.1.7.2': 'pink',
   }
 
+  const decYearToDate = (t: number) => {
+    const y = Math.floor(t)
+    const frac = t - y
+    const base = new Date(y, 0, 1)
+    const ms = frac * (new Date(y + 1, 0, 1).getTime() - base.getTime())
+    return new Date(base.getTime() + ms).toISOString().slice(0, 10)
+  }
+
+  const rttPts = PRISM_DATA.rootToTip
+  const firstSeen = rttPts.length ? decYearToDate(Math.min(...rttPts.map(p => p.t))) : '—'
+  const lastSeen = rttPts.length ? decYearToDate(Math.max(...rttPts.map(p => p.t))) : '—'
+
+  const highMuts = PRISM_DATA.mutations
+    .filter(m => m.impact === 'high' || m.impact === 'mid')
+    .slice(0, 4)
+    .map(m => `HA-${m.site}`)
+
   return (
     <div className="panel-body">
       <div className="row" style={{ gap: 8, marginBottom: 10 }}>
@@ -305,9 +358,9 @@ function CladeInspector({ clade }: CladeInspectorProps) {
         <div>ORIGIN       <b style={{ color: 'var(--fg)' }}>{info.origin}</b></div>
         <div>SEQUENCES    <b style={{ color: 'var(--fg)' }}>{info.n}</b></div>
         <div>FITNESS      <b style={{ color: info.fitness > 0 ? 'var(--signal-hot)' : 'var(--signal-cool)' }}>{info.fitness >= 0 ? '+' : ''}{info.fitness.toFixed(2)}</b></div>
-        <div>FIRST SEEN   <b style={{ color: 'var(--fg)' }}>2022-01-14</b></div>
-        <div>LAST SEEN    <b style={{ color: 'var(--fg)' }}>2026-04-18</b></div>
-        <div>MUTATIONS    <b style={{ color: 'var(--fg)' }}>HA-226 · HA-193 · HA-158</b></div>
+        <div>FIRST SEEN   <b style={{ color: 'var(--fg)' }}>{firstSeen}</b></div>
+        <div>LAST SEEN    <b style={{ color: 'var(--fg)' }}>{lastSeen}</b></div>
+        <div>MUTATIONS    <b style={{ color: 'var(--fg)' }}>{highMuts.length ? highMuts.join(' · ') : '—'}</b></div>
       </div>
       <div className="row" style={{ marginTop: 14, gap: 6 }}>
         <button className="btn" onClick={() => setModule('molecule')}>Open in VISOR →</button>
@@ -324,10 +377,24 @@ function CladeInspector({ clade }: CladeInspectorProps) {
 // ─── StreamView ──────────────────────────────────────────────────────────────
 
 export default function StreamView() {
+  const PRISM_DATA = usePrismData()
   const selectedClade = useAppStore(s => s.selectedClade)
   const setSelectedClade = useAppStore(s => s.setSelectedClade)
 
   const handleClade = (c: string | null) => setSelectedClade(c)
+
+  const totalSeqs = useMemo(() => PRISM_DATA.clades.reduce((s, c) => s + c.n, 0), [PRISM_DATA.clades])
+  const rttReg = useMemo(() => linReg(PRISM_DATA.rootToTip), [PRISM_DATA.rootToTip])
+  const rttN = PRISM_DATA.rootToTip.length
+
+  const clockLabel = rttReg.slope >= 0.001
+    ? `${(rttReg.slope * 1e3).toFixed(1)}e−3`
+    : `${(rttReg.slope * 1e4).toFixed(1)}e−4`
+
+  const tRange = useMemo(() => {
+    const ts = PRISM_DATA.rootToTip.map(p => p.t)
+    return ts.length ? [Math.floor(Math.min(...ts)), Math.floor(Math.max(...ts))] : [0, 0]
+  }, [PRISM_DATA.rootToTip])
 
   return (
     <div className="stream-view">
@@ -335,7 +402,7 @@ export default function StreamView() {
         <div className="panel-head">
           <span className="title"><b>TREETIME</b>  /  phylogenetic tree</span>
           <span className="grow" />
-          <span className="mono mute" style={{ fontSize: 10 }}>n=944 · clock 3.4e−3</span>
+          <span className="mono mute" style={{ fontSize: 10 }}>n={totalSeqs.toLocaleString()} · clock {clockLabel}</span>
         </div>
         <div className="panel-body flush" style={{ padding: 14 }}>
           <PhyloTree selectedClade={selectedClade} setSelectedClade={handleClade} />
@@ -344,7 +411,7 @@ export default function StreamView() {
 
       <div className="panel" style={{ gridArea: 'sank' }}>
         <div className="panel-head">
-          <span className="title"><b>STREAM</b>  /  clade flow · 2022 → 2026</span>
+          <span className="title"><b>STREAM</b>  /  clade flow · {tRange[0]} → {tRange[1]}</span>
           <span className="grow" />
           <span className="mono mute" style={{ fontSize: 10 }}>brush tree to filter</span>
         </div>
@@ -357,10 +424,10 @@ export default function StreamView() {
         <div className="panel-head">
           <span className="title"><b>ROOT-TO-TIP</b>  /  molecular clock</span>
           <span className="grow" />
-          <span className="mono mute" style={{ fontSize: 10 }}>n=47 · R²=0.64</span>
+          <span className="mono mute" style={{ fontSize: 10 }}>n={rttN} · R²={rttReg.r2.toFixed(2)}</span>
         </div>
         <div className="panel-body flush" style={{ padding: 14 }}>
-          <RootToTip selectedClade={selectedClade} />
+          <RootToTip selectedClade={selectedClade} reg={rttReg} clockLabel={clockLabel} />
         </div>
       </div>
 

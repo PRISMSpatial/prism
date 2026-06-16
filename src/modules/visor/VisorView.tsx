@@ -1,5 +1,5 @@
 /* VISOR — molecular structure + alignment ribbon + mutation table + drug design */
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { usePrismData } from '../../api/PrismDataProvider'
 import { MoleculeViewer } from './MoleculeViewer'
 import { DrugPanel } from './DrugPanel'
@@ -140,7 +140,19 @@ function MutationTable({ selectedSite, setSelectedSite }: MutationTableProps) {
 // ─── VisorView ───────────────────────────────────────────────────────────────
 
 export default function VisorView() {
+  const PRISM_DATA = usePrismData()
   const [site, setSite] = useState<number | null>(226)
+
+  const antigenicCount = useMemo(
+    () => PRISM_DATA.alignment.filter(a => a.highlight).length,
+    [PRISM_DATA.alignment],
+  )
+  const avgEsm = useMemo(() => {
+    const muts = PRISM_DATA.mutations
+    if (!muts.length) return 0
+    return muts.reduce((s, m) => s + m.esm, 0) / muts.length
+  }, [PRISM_DATA.mutations])
+  const pLDDT = useMemo(() => Math.max(0, Math.min(100, 80 + avgEsm * 2)).toFixed(1), [avgEsm])
 
   return (
     <div className="visor-view">
@@ -148,7 +160,7 @@ export default function VisorView() {
         <div className="panel-head">
           <span className="title"><b>VISOR</b>  /  HA trimer · WebGL · ESM-2 homolog</span>
           <span className="grow" />
-          <span className="mono mute" style={{ fontSize: 10 }}>confidence · pLDDT 82.1</span>
+          <span className="mono mute" style={{ fontSize: 10 }}>confidence · pLDDT {pLDDT}</span>
         </div>
         <div className="panel-body flush" style={{ minHeight: 320, position: 'relative' }}>
           <MoleculeViewer selectedSite={site} onSelectSite={(s) => setSite(s === site ? null : s)} />
@@ -166,9 +178,9 @@ export default function VisorView() {
 
       <div className="panel" style={{ gridArea: 'align' }}>
         <div className="panel-head">
-          <span className="title"><b>ALIGNMENT</b>  /  HA1 · 1–60 aa · ref A/HK/4801/2014</span>
+          <span className="title"><b>ALIGNMENT</b>  /  HA1 · 1–{PRISM_DATA.alignment.length} aa · ref A/HK/4801/2014</span>
           <span className="grow" />
-          <span className="mono mute" style={{ fontSize: 10 }}>5 antigenic sites flagged</span>
+          <span className="mono mute" style={{ fontSize: 10 }}>{antigenicCount} antigenic sites flagged</span>
         </div>
         <div className="panel-body">
           <AlignmentRibbon selectedSite={site} setSelectedSite={setSite} />

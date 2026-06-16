@@ -56,7 +56,13 @@
   border: 1px solid var(--line);
   display: grid; place-items: center;
   font-size: 10px; color: var(--fg-dim); font-family: "JetBrains Mono", monospace;
+  cursor: pointer;
 }
+.topbar-logout {
+  background: none; border: none; color: var(--fg-mute); cursor: pointer;
+  padding: 4px; display: grid; place-items: center; opacity: .5;
+}
+.topbar-logout:hover { opacity: 1; color: var(--signal-hot); }
 
 /* Rail */
 .rail {
@@ -249,3 +255,46 @@
 }
 .paper-root .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 .paper-root a { color: #222; }
+
+/* Login */
+.login-page {
+  width: 100vw; height: 100vh;
+  display: grid; place-items: center;
+  background: var(--ink-0);
+  font-family: "Inter Tight", sans-serif;
+}
+.login-card {
+  width: 340px; padding: 36px 32px;
+  background: var(--ink-1);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 16px 64px rgba(0,0,0,.6);
+}
+.login-logo {
+  display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px;
+}
+.login-tab {
+  flex: 1; padding: 8px 0; background: none; border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--fg-mute); font-family: "JetBrains Mono", monospace;
+  font-size: 11px; cursor: pointer; letter-spacing: .06em;
+}
+.login-tab:hover { color: var(--fg-dim); }
+.login-tab.active { color: var(--signal-phos); border-bottom-color: var(--signal-phos); }
+.login-input {
+  width: 100%; padding: 9px 12px;
+  background: var(--ink-0); border: 1px solid var(--line);
+  border-radius: 3px; color: var(--fg);
+  font-family: "JetBrains Mono", monospace; font-size: 12px;
+  box-sizing: border-box;
+}
+.login-input:focus { outline: none; border-color: var(--signal-phos); }
+.login-input::placeholder { color: var(--fg-mute); }
+.login-submit {
+  padding: 10px 0; background: var(--signal-phos); color: #000;
+  border: none; border-radius: 3px; font-weight: 600;
+  font-family: "JetBrains Mono", monospace; font-size: 12px;
+  cursor: pointer; letter-spacing: .08em;
+}
+.login-submit:hover { filter: brightness(1.1); }
+.login-submit:disabled { opacity: .5; cursor: wait; }

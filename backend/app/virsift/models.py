@@ -110,3 +110,65 @@ class SessionInfo(BaseModel):
     current_count: int
     subtypes: dict[str, int]
     hosts: dict[str, int]
+
+
+class FieldCoverage(BaseModel):
+    field: str
+    coverage_pct: float
+    missing: int
+    example: str | None = None
+    notes: str | None = None
+
+
+class HeaderIssue(BaseModel):
+    line: int
+    original_header: str
+    issue: str
+    suggested_fix: str
+
+
+class ValidationResult(BaseModel):
+    session_id: str
+    header_variant: str
+    confidence: float
+    field_coverage: list[FieldCoverage]
+    header_issues: list[HeaderIssue]
+    warnings_count: int
+
+
+class WorkspaceFile(BaseModel):
+    session_id: str
+    filename: str
+    source: str
+    sequences: int
+    subtypes: int
+    segments: int
+    date_range: list[str | None]
+    parse_time: float
+    status: str
+    warnings: int
+    header_variant: str
+    confidence: float
+
+
+class MergeRequest(BaseModel):
+    session_ids: list[str]
+
+
+class FetchUrlRequest(BaseModel):
+    url: str
+
+
+class DatasetSummary(BaseModel):
+    session_id: str
+    sequences_active: int
+    avg_length: float
+    earliest: str | None
+    latest: str | None
+    source_file: str
+    header_variant: str
+    confidence: float
+    subtypes: dict[str, int]
+    segments: dict[str, int]
+    locations: dict[str, int]
+    hosts: dict[str, int]

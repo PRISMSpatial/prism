@@ -167,6 +167,7 @@ export function MoleculeViewer({ selectedSite, onSelectSite }: MoleculeViewerPro
     el.addEventListener('pointerdown', onPointerDown)
 
     const clock = new THREE.Clock()
+    const _scaleVec = new THREE.Vector3()
     const animate = () => {
       rafRef.current = requestAnimationFrame(animate)
       const t = clock.getElapsedTime()
@@ -183,7 +184,7 @@ export function MoleculeViewer({ selectedSite, onSelectSite }: MoleculeViewerPro
       // Highlight selected site
       siteSpheres.forEach((mesh, site) => {
         const target = site === selectedSiteRef.current ? 1.8 : 1.0
-        mesh.scale.lerp(new THREE.Vector3(target, target, target), 0.1)
+        mesh.scale.lerp(_scaleVec.set(target, target, target), 0.1)
       })
 
       renderer.render(scene, camera)

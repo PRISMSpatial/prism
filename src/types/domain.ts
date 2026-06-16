@@ -255,6 +255,193 @@ export interface VirsiftFieldInfo {
   sample_values: string[]
 }
 
+// ─── Forecast SEIR types ──────────────────────────────────────────────────
+
+export interface SEIRParams {
+  beta: number
+  sigma: number
+  gamma: number
+  R0: number
+  I0: number
+  E0: number
+  incubation_days: number
+  infectious_days: number
+  fit_loss: number
+}
+
+export interface ForecastScenarioResult {
+  forecast: ForecastData
+  incidence: IncidenceData
+  peak_incidence: number
+  peak_week: number
+  valid_draws: number
+}
+
+export interface ForecastRunResult {
+  session_id: string
+  params: SEIRParams
+  n_observed: number
+  horizon: number
+  population: number
+  scenarios: Record<string, ForecastScenarioResult>
+}
+
+// ─── VirSift Workspace types ──────────────────────────────────────────────
+
+export interface WorkspaceFile {
+  session_id: string
+  filename: string
+  source: string
+  sequences: number
+  subtypes: number
+  segments: number
+  date_range: [string | null, string | null]
+  parse_time: number
+  status: string
+  warnings: number
+  header_variant: string
+  confidence: number
+}
+
+export interface FieldCoverage {
+  field: string
+  coverage_pct: number
+  missing: number
+  example: string | null
+  notes: string | null
+}
+
+export interface HeaderIssue {
+  line: number
+  original_header: string
+  issue: string
+  suggested_fix: string
+}
+
+export interface ValidationResult {
+  session_id: string
+  header_variant: string
+  confidence: number
+  field_coverage: FieldCoverage[]
+  header_issues: HeaderIssue[]
+  warnings_count: number
+}
+
+export interface DatasetSummary {
+  session_id: string
+  sequences_active: number
+  avg_length: number
+  earliest: string | null
+  latest: string | null
+  source_file: string
+  header_variant: string
+  confidence: number
+  subtypes: Record<string, number>
+  segments: Record<string, number>
+  locations: Record<string, number>
+  hosts: Record<string, number>
+}
+
+// ─── Report types ─────────────────────────────────────────────────────────
+
+export interface ReportMetricBlock {
+  label: string
+  value: string
+  unit: string
+}
+
+export interface ReportEvidenceRow {
+  source: string
+  kind: string
+  body: string
+}
+
+export interface ReportForecastBlock {
+  horizon_weeks: number
+  current_rt_median: number
+  current_rt_ci: number[]
+  peak_week: string
+  peak_incidence_baseline: number
+  peak_incidence_surge: number
+  peak_incidence_intervention: number
+  crossover_week: string | null
+  has_seir: boolean
+  seir_r0: number | null
+  seir_beta: number | null
+  seir_sigma: number | null
+  seir_gamma: number | null
+  rt_median: number[] | null
+  rt_p50: [number, number][] | null
+  rt_p80: [number, number][] | null
+  rt_p95: [number, number][] | null
+  rt_now: number | null
+}
+
+export interface ReportAnomalyRow {
+  id: string
+  tier: string
+  title: string
+  score: number
+  status: string
+}
+
+export interface ReportPhyloBlock {
+  clade: string
+  fitness: number
+  n_sequences: number
+  origin: string
+  mutations: string[]
+}
+
+export interface ReportVirsiftBlock {
+  filename: string
+  sequences_active: number
+  subtypes: Record<string, number>
+  segments: Record<string, number>
+  date_range: (string | null)[]
+  header_variant: string
+}
+
+export interface ReportActionItem {
+  verb: string
+  body: string
+  priority: string
+}
+
+export interface ReportData {
+  report_id: string
+  report_type: string
+  generated_at: string
+  region_id: string
+  region_name: string
+  country: string
+  iso: string
+  tier: string
+  clade: string
+  pathogen: string
+  subtitle: string
+  pullquote: string
+  metrics: ReportMetricBlock[]
+  evidence: ReportEvidenceRow[]
+  forecast: ReportForecastBlock | null
+  anomalies: ReportAnomalyRow[]
+  phylo: ReportPhyloBlock | null
+  virsift: ReportVirsiftBlock | null
+  actions: ReportActionItem[]
+  confidence: number
+  analyst: string
+  classification: string
+}
+
+export interface ReportHistoryItem {
+  report_id: string
+  region_id: string
+  region_name: string
+  report_type: string
+  generated_at: string
+  tier: string
+}
+
 export interface PrismData {
   now: string
   pathogen: Pathogen
@@ -340,4 +527,23 @@ export const SOURCE_STATUS_CHIP_CLASS: Record<SourceStatus, string> = {
   fresh: 'phos',
   stale: 'warm',
   error: 'hot',
+}
+
+// ─── Auth types ──────────────────────────────────────────────────────────
+
+export type UserRole = 'viewer' | 'analyst' | 'admin'
+
+export interface AuthUser {
+  id: string
+  email: string
+  display_name: string
+  initials: string
+  role: UserRole
+}
+
+export interface AuthTokenResponse {
+  access_token: string
+  token_type: string
+  expires_in: number
+  user: AuthUser
 }

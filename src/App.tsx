@@ -1,11 +1,13 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from './store'
+import { useAuthStore } from './store/auth'
 import { Rail } from './components/Rail'
 import { Topbar } from './components/Topbar'
 import { Statusbar } from './components/Statusbar'
 import { CommandPalette } from './components/CommandPalette'
 import { TweaksPanel } from './components/TweaksPanel'
+import { LoginPage } from './components/LoginPage'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { moduleVariants } from './motion'
 
@@ -41,14 +43,26 @@ function ActiveModule({ module }: { module: string }) {
 
 export default function App() {
   const { module } = useAppStore()
+  const { user, loading, hydrate } = useAuthStore()
   useKeyboardShortcuts()
+
+  useEffect(() => { hydrate() }, [hydrate])
+
+  if (loading) {
+    return (
+      <div className="app" style={{ display: 'grid', placeItems: 'center' }}>
+        <span className="mute mono caps">Initialising…</span>
+      </div>
+    )
+  }
+
+  if (!user) return <LoginPage />
 
   return (
     <div className="app">
       <Topbar />
       <Rail />
 
-      {/* AnimatePresence drives the module-switch animation */}
       <AnimatePresence mode="wait" initial={false}>
         <motion.main
           key={module}

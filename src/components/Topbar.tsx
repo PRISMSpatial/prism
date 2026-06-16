@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../store'
+import { useAuthStore } from '../store/auth'
 import { usePrismData } from '../api/PrismDataProvider'
 
 const MODULE_LABELS: Record<string, string> = {
@@ -15,6 +16,8 @@ const MODULE_LABELS: Record<string, string> = {
 export function Topbar() {
   const PRISM_DATA = usePrismData()
   const { module, setCmdkOpen, setTweaksOpen } = useAppStore()
+  const user = useAuthStore(s => s.user)
+  const logout = useAuthStore(s => s.logout)
   const [utcNow, setUtcNow] = useState('')
 
   useEffect(() => {
@@ -65,9 +68,19 @@ export function Topbar() {
         className="topbar-user"
         onClick={() => setTweaksOpen(true)}
         aria-label="Open tweaks panel"
-        title="Edit mode / tweaks"
+        title={user ? `${user.display_name} (${user.role})` : 'Tweaks'}
       >
-        PR
+        {user?.initials ?? '??'}
+      </button>
+      <button
+        className="topbar-logout"
+        onClick={logout}
+        aria-label="Sign out"
+        title="Sign out"
+      >
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+          <path d="M6 2H3v12h3M11 4l4 4-4 4M7 8h8" />
+        </svg>
       </button>
     </header>
   )
